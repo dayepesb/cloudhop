@@ -13,6 +13,18 @@ cloudhop starts a small web server on your computer and opens it in your
 browser. Everything you do there is the same as in the terminal: aliases
 created in the page work with `hop` straight away, and the other way around.
 
+## Pages
+
+| Page | What it's for |
+| --- | --- |
+| **Aliases** (home) | Every alias in one table, with a filter (any words, in any order), a source filter and *Production only*. Change regions, open the console, mark production, rename or remove. |
+| **Sources** | Your SSO portals and personal accounts: session state, sign in, sync, add aliases, remove. *View aliases →* opens the alias table filtered to that source. |
+| **AI assistants** | Install, update or remove the cloudhop skill and MCP server, for you or this project. |
+| **Tools** | The AWS CLI's status and ready-to-copy commands for the shell integration, running in many accounts and sharing with your team. |
+
+Pages have their own address (`#/aliases`, `#/sources`, `#/assistants`,
+`#/tools`), so the browser's back button works.
+
 ## What you can do
 
 - **Add a source.** Click **+ Add source**, choose a company portal or a
@@ -23,6 +35,8 @@ created in the page work with `hop` straight away, and the other way around.
   source, with a filter. Tick the ones you want and give each an alias and a
   region. Accounts that already have an alias are marked.
 - **Change a region.** Edit it in the table and press <kbd>Enter</kbd>.
+- **Open the AWS console** as an alias, already signed in, with **Console**.
+- **Mark production** with the **Prod** checkbox, and **rename** with ✎.
 - **Sign in again or sync** a source with its buttons.
 - **Remove** an alias (✕) or a whole source (**Remove**, asks first).
 - **Teach your AI assistants.** The *AI assistants* section installs, updates

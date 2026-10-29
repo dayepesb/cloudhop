@@ -21,15 +21,45 @@ try {
   token = token ?? sessionStorage.getItem(TOKEN_KEY);
 } catch {}
 
-// A fresh link opened in this same tab only changes the fragment: reload to pick up its token.
+// ---------- pages ----------
+
+const PAGES = {
+  aliases: 'Aliases',
+  sources: 'Sources',
+  assistants: 'AI assistants',
+  tools: 'Tools',
+};
+let route = 'aliases';
+const aliasFilter = { text: '', source: '', prodOnly: false };
+
+/** `#/aliases?source=acme` → route "aliases", filtered by that source. */
+function readRoute() {
+  const match = /^#\/([a-z]+)(?:\?(.*))?$/.exec(location.hash);
+  route = match && PAGES[match[1]] ? match[1] : 'aliases';
+  const query = new URLSearchParams(match?.[2] ?? '');
+  if (query.has('source')) aliasFilter.source = query.get('source');
+}
+
+function go(page, query) {
+  location.hash = `#/${page}${query ? `?${new URLSearchParams(query)}` : ''}`;
+}
+
+// A fresh link opened in this same tab carries a new token: reload to pick it up.
+// Any other fragment is a page change.
 addEventListener('hashchange', () => {
-  if (new URLSearchParams(location.hash.slice(1)).has('token')) location.reload();
+  if (new URLSearchParams(location.hash.slice(1)).has('token')) {
+    location.reload();
+    return;
+  }
+  readRoute();
+  if (state) render();
 });
 
 const $main = document.getElementById('main');
 const $dialog = document.getElementById('dialog');
 const $toasts = document.getElementById('toasts');
 const $addSource = document.getElementById('add-source');
+const $nav = document.getElementById('nav');
 let state;
 
 /** Tiny element builder: h('button', { class: 'primary', onclick }, 'Save'). */
@@ -57,7 +87,7 @@ class ApiError extends Error {
 }
 
 // Calls that may sign in wait for the person in the browser; everything else should answer quickly.
-const MAY_SIGN_IN = /^\/api\/sources(\/[^/]+\/(login|sync|targets))?$/;
+const MAY_SIGN_IN = /^\/api\/(sources(\/[^/]+\/(login|sync|targets))?|aliases\/[^/]+\/console)$/;
 const QUICK_TIMEOUT_MS = 20_000;
 
 async function api(method, path, body) {
@@ -163,27 +193,310 @@ async function checkDoctor() {
 function render() {
   const enabled = state.enabledProviders;
   $addSource.hidden = enabled.length === 0;
+  $nav.hidden = enabled.length === 0;
   if (enabled.length === 0) return renderChooseClouds();
-  if (state.sources.length === 0) {
-    $main.replaceChildren(
+  for (const link of $nav.querySelectorAll('a')) {
+    if (link.dataset.page === route) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+  document.title = `${PAGES[route]} · cloudhop`;
+  const pages = {
+    aliases: aliasesPage,
+    sources: sourcesPage,
+    assistants: assistantsPage,
+    tools: toolsPage,
+  };
+  $main.replaceChildren(...pages[route]());
+  if (route === 'assistants') loadAssistants();
+  if (route === 'tools') loadTools();
+}
+
+function pageHead(title, subtitle, ...actions) {
+  return h(
+    'div',
+    { class: 'page-head' },
+    h('div', {}, h('h1', {}, title), subtitle ? h('p', {}, subtitle) : null),
+    h('div', { class: 'actions' }, actions),
+  );
+}
+
+function firstSourceHero() {
+  return h(
+    'div',
+    { class: 'hero' },
+    h('h2', {}, 'Add your first account'),
+    h(
+      'p',
+      {},
+      'Add a company SSO portal or a personal account. cloudhop signs you in, finds every account and role you can use, and lets you give each one a short alias.',
+    ),
+    h('button', { class: 'primary', onclick: () => openAddSource() }, '+ Add source'),
+  );
+}
+
+// ---------- Aliases page ----------
+
+function aliasesPage() {
+  if (state.sources.length === 0) return [firstSourceHero()];
+  if (aliasFilter.source && !state.sources.some((s) => s.id === aliasFilter.source))
+    aliasFilter.source = '';
+
+  const addAliases = () => {
+    const source =
+      state.sources.find((s) => s.id === aliasFilter.source) ??
+      (state.sources.length === 1 ? state.sources[0] : undefined);
+    if (source) openAliasPicker(source);
+    else openSourceChooser();
+  };
+  const head = pageHead(
+    'Aliases',
+    'Each alias is one account, role and region. Run it with hop <alias>.',
+    h('button', { onclick: addAliases }, '+ Aliases'),
+  );
+  if (state.aliases.length === 0) {
+    return [
+      head,
       h(
         'div',
         { class: 'hero' },
-        h('h2', {}, 'Add your first account'),
-        h(
-          'p',
-          {},
-          'Add a company SSO portal or a personal account. cloudhop signs you in, finds every account and role you can use, and lets you give each one a short alias.',
-        ),
-        h('button', { class: 'primary', onclick: () => openAddSource() }, '+ Add source'),
+        h('h2', {}, 'No aliases yet'),
+        h('p', {}, 'Pick the accounts and roles you use and give each one a short name.'),
+        h('button', { class: 'primary', onclick: addAliases }, 'Pick accounts'),
       ),
-      assistantsCard(),
-    );
-    loadAssistants();
-    return;
+    ];
   }
-  $main.replaceChildren(...state.sources.map(sourceCard), assistantsCard());
-  loadAssistants();
+
+  const rows = h('tbody', { id: 'alias-rows' });
+  const count = h('span', { class: 'count' });
+  const fill = () => {
+    const words = aliasFilter.text.toLowerCase().split(/\s+/).filter(Boolean);
+    const visible = state.aliases.filter((a) => {
+      if (aliasFilter.source && a.source !== aliasFilter.source) return false;
+      if (aliasFilter.prodOnly && !a.prod) return false;
+      const text = `${a.name} ${a.label ?? a.target} ${a.region ?? ''} ${a.source}`.toLowerCase();
+      return words.every((w) => text.includes(w));
+    });
+    rows.replaceChildren(
+      ...(visible.length
+        ? visible.map(aliasRow)
+        : [
+            h(
+              'tr',
+              {},
+              h('td', { colspan: '5', class: 'empty' }, 'No alias matches these filters.'),
+            ),
+          ]),
+    );
+    count.textContent = `${visible.length} of ${state.aliases.length}`;
+  };
+
+  const search = h('input', {
+    type: 'search',
+    placeholder: 'Filter: name, account, role or region',
+    value: aliasFilter.text,
+    'aria-label': 'Filter aliases',
+    oninput: (e) => {
+      aliasFilter.text = e.currentTarget.value;
+      fill();
+    },
+  });
+  const sourceSelect = h(
+    'select',
+    {
+      'aria-label': 'Source',
+      onchange: (e) => {
+        aliasFilter.source = e.currentTarget.value;
+        fill();
+      },
+    },
+    h('option', { value: '' }, 'All sources'),
+    state.sources.map((s) =>
+      h('option', { value: s.id, selected: s.id === aliasFilter.source }, s.id),
+    ),
+  );
+  const prodOnly = h(
+    'label',
+    { class: 'prod-toggle' },
+    h('input', {
+      type: 'checkbox',
+      checked: aliasFilter.prodOnly,
+      onchange: (e) => {
+        aliasFilter.prodOnly = e.currentTarget.checked;
+        fill();
+      },
+    }),
+    'Production only',
+  );
+
+  const table = h(
+    'table',
+    { class: 'aliases' },
+    h(
+      'thead',
+      {},
+      h(
+        'tr',
+        {},
+        h('th', {}, 'Alias'),
+        h('th', {}, 'Source'),
+        h('th', {}, 'Region'),
+        h('th', {}, 'Account / role'),
+        h('th'),
+      ),
+    ),
+    rows,
+  );
+  fill();
+  return [
+    head,
+    h(
+      'div',
+      { class: 'toolbar' },
+      search,
+      sourceSelect,
+      prodOnly,
+      h('div', { class: 'spacer' }),
+      count,
+    ),
+    h('section', { class: 'card' }, table),
+  ];
+}
+
+/** When several sources exist, ask which one to pick accounts from. */
+function openSourceChooser() {
+  showDialog(
+    'Add aliases from',
+    h(
+      'div',
+      { class: 'choices' },
+      state.sources.map((source) =>
+        h(
+          'button',
+          { class: 'choice', onclick: () => openAliasPicker(source) },
+          h(
+            'span',
+            {},
+            h('strong', {}, source.id),
+            h('small', {}, source.settings.startUrl ?? source.kindLabel),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// ---------- Sources page ----------
+
+function sourcesPage() {
+  const head = pageHead('Sources', 'The SSO portals and personal accounts you sign in to.');
+  if (state.sources.length === 0) return [head, firstSourceHero()];
+  return [head, ...state.sources.map(sourceCard)];
+}
+
+// ---------- AI assistants page ----------
+
+function assistantsPage() {
+  return [assistantsCard()];
+}
+
+// ---------- Tools page ----------
+
+function snippet(command) {
+  return h(
+    'div',
+    { class: 'snippet' },
+    h('code', {}, command),
+    h(
+      'button',
+      {
+        class: 'link',
+        title: 'Copy',
+        'aria-label': `Copy ${command}`,
+        onclick: () =>
+          navigator.clipboard
+            ?.writeText(command)
+            .then(() => toast('Copied.'))
+            .catch(() =>
+              toast('Copy it by hand: the browser blocked the clipboard.', { error: true }),
+            ),
+      },
+      'Copy',
+    ),
+  );
+}
+
+function toolCard(title, text, ...commands) {
+  return h(
+    'section',
+    { class: 'card' },
+    h('div', { class: 'card-head' }, h('h2', {}, title)),
+    h(
+      'div',
+      { class: 'card-body padded' },
+      h('p', { class: 'card-help' }, text),
+      commands.map(snippet),
+    ),
+  );
+}
+
+function toolsPage() {
+  const sample = state.aliases[0]?.name ?? 'acme-dev';
+  return [
+    pageHead('Tools', 'More ways to use cloudhop from your terminal.'),
+    h(
+      'section',
+      { class: 'card', id: 'tools-cli' },
+      h('div', { class: 'card-head' }, h('h2', {}, 'Cloud CLIs')),
+      h('div', { class: 'card-body padded' }, h('p', { class: 'card-help' }, 'Checking…')),
+    ),
+    toolCard(
+      'Shell integration',
+      'Pick aliases from a list, tab-complete them, and use one in your shell so plain aws and Terraform work without hop.',
+      'cloudhop shell install',
+      `cloudhop use ${sample}`,
+      'hop',
+    ),
+    toolCard(
+      'Run in many accounts',
+      'Run one command in many aliases at once: names, lists, wildcards or /regex/. It asks before running.',
+      `cloudhop each '${sample.split('-')[0]}-*' -- s3 ls`,
+    ),
+    toolCard(
+      'Share with your team',
+      'Export your portals and aliases (no secrets) and let teammates import them in one command.',
+      'cloudhop team export --out team.yaml',
+      'cloudhop team import team.yaml',
+    ),
+  ];
+}
+
+async function loadTools() {
+  const card = document.querySelector('#tools-cli .card-body');
+  if (!card) return;
+  try {
+    const entries = await api('GET', '/api/doctor');
+    card.replaceChildren(
+      ...entries.map((e) =>
+        h(
+          'div',
+          { class: 'tool-row' },
+          h('span', { class: `badge ${e.installed && !e.outdated ? 'valid' : 'expired'}` }, e.cli),
+          h(
+            'span',
+            {},
+            !e.installed
+              ? 'Not installed.'
+              : e.outdated
+                ? `${e.version} is older than ${e.minVersion}.`
+                : `Version ${e.version}.`,
+          ),
+          e.installed && !e.outdated ? null : snippet('cloudhop doctor'),
+        ),
+      ),
+    );
+  } catch (error) {
+    card.replaceChildren(h('p', { class: 'card-help' }, error.message));
+  }
 }
 
 // ---------- AI assistants ----------
@@ -508,6 +821,7 @@ function sourceCard(source) {
     ),
   );
 
+  const prodCount = aliases.filter((a) => a.prod).length;
   const body =
     aliases.length === 0
       ? h(
@@ -521,21 +835,19 @@ function sourceCard(source) {
           ),
         )
       : h(
-          'table',
-          {},
+          'div',
+          { class: 'source-summary' },
           h(
-            'thead',
+            'span',
             {},
-            h(
-              'tr',
-              {},
-              h('th', {}, 'Alias'),
-              h('th', {}, 'Region'),
-              h('th', {}, 'Account / role'),
-              h('th'),
-            ),
+            `${aliases.length} alias(es)`,
+            prodCount ? h('span', { class: 'prod-tag' }, `${prodCount} PROD`) : null,
           ),
-          h('tbody', {}, aliases.map(aliasRow)),
+          h(
+            'button',
+            { class: 'link', onclick: () => go('aliases', { source: source.id }) },
+            'View aliases →',
+          ),
         );
   return h('section', { class: 'card' }, head, h('div', { class: 'card-body' }, body));
 }
@@ -579,10 +891,87 @@ function aliasRow(alias) {
   });
   save.addEventListener('click', commit);
 
+  const patch = (body, message) =>
+    api('PATCH', `/api/aliases/${encodeURIComponent(alias.name)}`, body)
+      .then(() => message && toast(message))
+      .catch(fail)
+      .then(refresh);
+  const iconButton = (label, title, onclick, extra = {}) =>
+    h('button', { class: 'link', title, 'aria-label': title, onclick, ...extra }, label);
+
+  const actions = h(
+    'div',
+    { class: 'row-actions' },
+    h(
+      'button',
+      {
+        title: `Open the AWS console as ${alias.name}, already signed in`,
+        disabled: alias.missing,
+        onclick: (e) =>
+          busy(e.currentTarget, async () => {
+            const result = await api(
+              'POST',
+              `/api/aliases/${encodeURIComponent(alias.name)}/console`,
+              {},
+            ).catch(fail);
+            if (result) {
+              toast(
+                result.via === 'signed-in'
+                  ? `Opened the console for ${alias.name}.`
+                  : result.via === 'portal'
+                    ? `Opened ${alias.name} through the SSO portal.`
+                    : `Opened the console sign-in page for ${alias.name}.`,
+              );
+            }
+          }),
+      },
+      'Console',
+    ),
+    h(
+      'label',
+      { class: 'prod-toggle', title: 'Production: hop and AI assistants ask before any change' },
+      h('input', {
+        type: 'checkbox',
+        checked: alias.prod,
+        'aria-label': `${alias.name} is production`,
+        onchange: (e) =>
+          patch(
+            { prod: e.currentTarget.checked },
+            e.currentTarget.checked
+              ? `${alias.name} is now production.`
+              : `${alias.name} is no longer production.`,
+          ),
+      }),
+      'Prod',
+    ),
+    iconButton('✎', `Rename ${alias.name}`, () => {
+      const to = prompt(`New name for "${alias.name}"`, alias.name)?.trim();
+      if (to && to !== alias.name) patch({ name: to }, `${alias.name} is now ${to}.`);
+    }),
+    iconButton(
+      '✕',
+      `Remove ${alias.name}`,
+      (e) => {
+        if (!confirm(`Remove alias "${alias.name}"?`)) return;
+        busy(e.currentTarget, async () => {
+          await api('DELETE', `/api/aliases/${encodeURIComponent(alias.name)}`).catch(fail);
+          await refresh();
+        });
+      },
+      { class: 'link danger-hover' },
+    ),
+  );
+
   return h(
     'tr',
-    {},
-    h('td', { class: 'alias', title: `hop ${alias.name} <command>` }, alias.name),
+    { class: alias.prod ? 'prod' : undefined },
+    h(
+      'td',
+      { class: 'alias', title: `hop ${alias.name} <command>` },
+      alias.name,
+      alias.prod ? h('span', { class: 'prod-tag' }, 'PROD') : null,
+    ),
+    h('td', { class: 'muted' }, alias.source),
     h('td', {}, h('div', { class: 'region' }, input, save)),
     h(
       'td',
@@ -591,26 +980,7 @@ function aliasRow(alias) {
         ? h('span', { class: 'missing' }, `${alias.target} (no longer available)`)
         : alias.label,
     ),
-    h(
-      'td',
-      { style: 'text-align:right' },
-      h(
-        'button',
-        {
-          class: 'link',
-          title: `Remove ${alias.name}`,
-          'aria-label': `Remove ${alias.name}`,
-          onclick: (e) => {
-            if (!confirm(`Remove alias "${alias.name}"?`)) return;
-            busy(e.currentTarget, async () => {
-              await api('DELETE', `/api/aliases/${encodeURIComponent(alias.name)}`).catch(fail);
-              await refresh();
-            });
-          },
-        },
-        '✕',
-      ),
-    ),
+    h('td', { style: 'text-align:right' }, actions),
   );
 }
 
@@ -943,5 +1313,6 @@ if (!token) {
     ),
   );
 } else {
+  readRoute();
   refresh();
 }

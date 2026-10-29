@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ProcessRunner, Source } from '@cloudhop/core';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AwsProvider } from './aws-provider';
+import { AwsProvider, isAwsReadOnly } from './aws-provider';
 import { isoSeconds, tokenState, writeToken } from './sso/token-cache';
 
 const runner: ProcessRunner = {
@@ -170,6 +170,39 @@ describe('region validation', () => {
   it('rejects typos', () => {
     for (const region of ['us-wst-1', 'useast1', 'US-EAST-1', 'us-east']) {
       expect(validate?.(region)).toBeTypeOf('string');
+    }
+  });
+});
+
+describe('isAwsReadOnly', () => {
+  it('lets reads through', () => {
+    for (const args of [
+      [],
+      ['sts', 'get-caller-identity'],
+      ['s3', 'ls'],
+      ['ec2', 'describe-instances', '--region', 'eu-west-1'],
+      ['--region', 'eu-west-1', 'lambda', 'list-functions'],
+      ['logs', 'tail', '/app', '--follow'],
+      ['s3', 'cp', 's3://bucket/report.csv', './report.csv'],
+      ['s3', 'rm', 's3://bucket/x', '--dryrun'],
+      ['dynamodb', 'batch-get-item', '--request-items', '{}'],
+    ]) {
+      expect(isAwsReadOnly(args), args.join(' ')).toBe(true);
+    }
+  });
+
+  it('treats changes and anything unknown as changes', () => {
+    for (const args of [
+      ['s3', 'rm', 's3://bucket/x'],
+      ['s3', 'cp', './a', 's3://bucket/a'],
+      ['s3', 'sync', '.', 's3://bucket'],
+      ['ec2', 'terminate-instances', '--instance-ids', 'i-1'],
+      ['lambda', 'invoke', '--function-name', 'f', 'out.json'],
+      ['cloudformation', 'deploy'],
+      ['--output', 'json', 'iam', 'create-user', '--user-name', 'x'],
+      ['some', 'brand-new-thing'],
+    ]) {
+      expect(isAwsReadOnly(args), args.join(' ')).toBe(false);
     }
   });
 });

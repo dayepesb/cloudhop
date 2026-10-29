@@ -13,6 +13,8 @@ import { AwsProvider } from '@cloudhop/provider-aws';
 import { notify } from './ui';
 
 /** Composition root: the only place that knows every concrete adapter. */
+const browser = new NodeBrowserOpener();
+
 export function createApp(env: NodeJS.ProcessEnv = process.env): CloudhopApp {
   const runner = new NodeProcessRunner();
   const awsDir = env.CLOUDHOP_AWS_DIR ?? join(homedir(), '.aws');
@@ -28,7 +30,7 @@ export function createApp(env: NodeJS.ProcessEnv = process.env): CloudhopApp {
       // Azure and Google Cloud providers plug in here.
     ],
     runner,
-    browser: new NodeBrowserOpener(),
+    browser,
     installer: new SystemToolInstaller(runner),
     notify,
   });

@@ -10,6 +10,7 @@ export type CloudhopErrorCode =
   | 'INVALID_NAME'
   | 'NOT_INTERACTIVE'
   | 'LOGIN_REQUIRED'
+  | 'PROD_CONFIRMATION_REQUIRED'
   | 'LOGIN_FAILED';
 
 /** An expected failure with a message meant for the user and an optional hint. */

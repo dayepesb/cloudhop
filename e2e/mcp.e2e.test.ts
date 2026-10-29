@@ -87,6 +87,26 @@ describe('cloudhop mcp', () => {
     expect(json(unknown)).toMatchObject({ error: 'ALIAS_NOT_FOUND' });
   });
 
+  it('refuses production changes until the user approves', async () => {
+    await connect();
+    await box.run(['prod', 'demo-dev']);
+    const call = (extra: Record<string, unknown> = {}) =>
+      client.callTool({
+        name: 'run_cloud_cli',
+        arguments: { alias: 'demo-dev', args: ['s3', 'rm', 's3://b/k'], ...extra },
+      });
+    const refused = await call();
+    expect(refused.isError).toBe(true);
+    expect(json(refused)).toMatchObject({ error: 'PROD_CONFIRMATION_REQUIRED' });
+    const approved = await call({ confirm_production: true });
+    expect(json(approved).exitCode).toBe(0);
+    const read = await client.callTool({
+      name: 'run_cloud_cli',
+      arguments: { alias: 'demo-dev', args: ['s3', 'ls'] },
+    });
+    expect(read.isError).toBeFalsy();
+  });
+
   it('asks for a sign-in instead of opening a browser on its own', async () => {
     await connect({ FAKE_AWS_EXPIRED: '1' });
     const result = await client.callTool({

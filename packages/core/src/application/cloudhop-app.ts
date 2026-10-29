@@ -10,7 +10,13 @@ import type {
 } from '../domain/model';
 import { assertValidName } from '../domain/naming';
 import { compareVersions } from '../domain/version';
-import type { CliRequirement, CloudProvider, EnvMode, ProcessEnv } from '../ports/cloud-provider';
+import type {
+  CliRequirement,
+  CloudProvider,
+  ConsoleSignIn,
+  EnvMode,
+  ProcessEnv,
+} from '../ports/cloud-provider';
 import type { ConfigStore } from '../ports/config-store';
 import type {
   BrowserOpener,
@@ -89,6 +95,8 @@ export interface AliasStatus {
   available: boolean;
   region: string | undefined;
   attributes: Record<string, string>;
+  /** Marked as production: protected against accidental changes. */
+  prod: boolean;
   session: SessionState;
   next: SessionNext;
 }
@@ -335,6 +343,7 @@ export class CloudhopApp {
           available: Boolean(resolved.target),
           region: resolved.region,
           attributes: resolved.target?.attributes ?? {},
+          prod: alias.prod === true,
           session: source.session,
           next: source.next,
         };
@@ -355,6 +364,32 @@ export class CloudhopApp {
       );
     }
     return status;
+  }
+
+  /** Renames an alias and its profile, keeping its account, role, region and production mark. */
+  async renameAlias(from: string, to: string): Promise<void> {
+    assertValidName('alias', to);
+    const config = await this.deps.config.load();
+    const alias = this.findAlias(config, from);
+    if (from === to) return;
+    if (config.aliases.some((a) => a.name === to)) {
+      throw new CloudhopError('ALIAS_EXISTS', `Alias "${to}" already exists.`);
+    }
+    alias.name = to;
+    const source = this.findSource(config, alias.source);
+    await this.syncProfiles(source.provider, config);
+    await this.deps.config.save(config);
+  }
+
+  /** Marks aliases as production (or not). Production aliases ask before changing anything. */
+  async setProduction(names: readonly string[], prod: boolean): Promise<void> {
+    const config = await this.deps.config.load();
+    for (const name of names) {
+      const alias = this.findAlias(config, name);
+      if (prod) alias.prod = true;
+      else delete alias.prod;
+    }
+    await this.deps.config.save(config);
   }
 
   /** Changes an alias' region; matching the source's region clears the override. */
@@ -409,6 +444,58 @@ export class CloudhopApp {
       throw loginRequired(resolved.source.id);
     }
     return result;
+  }
+
+  /**
+   * Whether running these CLI arguments (or, with `args` undefined, any
+   * command through `cloudhop exec`) as this alias needs a person's OK: true
+   * for production aliases unless the command surely only reads.
+   */
+  async needsProductionConfirmation(name: string, args?: readonly string[]): Promise<boolean> {
+    const resolved = await this.resolveAlias(name);
+    if (!resolved.alias.prod) return false;
+    if (!args) return true;
+    return !this.provider(resolved.source.provider).isReadOnly(args);
+  }
+
+  /**
+   * A URL that opens the web console as the alias, signing in first if the
+   * session expired. The URL is a short-lived secret: open it, never print it.
+   */
+  async consoleUrl(
+    name: string,
+    { service, region }: { service?: string; region?: string } = {},
+  ): Promise<ConsoleSignIn> {
+    const resolved = await this.usableAlias(name, region ? { region } : {});
+    const provider = this.provider(resolved.source.provider);
+    if (!provider.consoleUrl) {
+      throw new CloudhopError(
+        'PROVIDER_NOT_AVAILABLE',
+        `${provider.displayName} has no console sign-in in cloudhop yet.`,
+      );
+    }
+    if (service !== undefined && !/^[a-z0-9-]{1,40}$/.test(service)) {
+      throw new CloudhopError(
+        'INVALID_NAME',
+        `"${service}" doesn't look like a service name.`,
+        'Examples: s3, ec2, lambda, cloudwatch.',
+      );
+    }
+    await this.ensureSession(resolved.source.id);
+    return provider.consoleUrl(resolved, service);
+  }
+
+  /**
+   * Opens the web console as the alias in the user's browser. The sign-in URL
+   * stays inside cloudhop: callers only learn how the user got in.
+   */
+  async openConsole(
+    name: string,
+    options: { service?: string; region?: string } = {},
+  ): Promise<ConsoleSignIn['via']> {
+    const { url, via } = await this.consoleUrl(name, options);
+    await this.deps.browser.open(url);
+    return via;
   }
 
   /** The command that shows who an alias is, e.g. `aws sts get-caller-identity`. */

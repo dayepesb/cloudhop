@@ -59,6 +59,13 @@ copying access keys, editing `~/.aws/config` by hand and running
 | Change an alias' region | `cloudhop region acme-prod us-east-2` |
 | Remove an alias or a portal | `cloudhop rm acme-dev` |
 | Check whether an alias needs a sign-in | `cloudhop status acme-prod` |
+| Open the AWS console, already signed in | `cloudhop console acme-prod s3` |
+| Pick the alias from a list | `hop` |
+| Mark an alias as production (asks before changes) | `cloudhop prod acme-prod` |
+| Run one command in many accounts | `cloudhop each 'acme-*' -- s3 ls` |
+| Use an alias in this shell (`aws`, Terraform...) | `cloudhop use acme-dev` |
+| Rename an alias | `cloudhop mv acme-dev dev` |
+| Share your setup with your team | `cloudhop team export` |
 | Do all of it from the browser | `cloudhop ui` |
 
 `hop <alias>` is the AWS CLI with the account, role and region already chosen:

@@ -41,6 +41,14 @@ export interface CliRequirement {
   minVersion?: string;
 }
 
+/** How `cloudhop console` got the user into the web console. */
+export interface ConsoleSignIn {
+  /** A secret for a few minutes: open it, never print or log it. */
+  url: string;
+  /** `signed-in`: straight in; `portal`: through the SSO portal; `sign-in-page`: the user signs in. */
+  via: 'signed-in' | 'portal' | 'sign-in-page';
+}
+
 export interface CloudProvider {
   readonly id: ProviderId;
   readonly displayName: string;
@@ -57,6 +65,13 @@ export interface CloudProvider {
   /** Writes whatever the provider's CLI needs to find the aliases (e.g. ~/.aws/config profiles). */
   syncProfiles(sources: readonly Source[], aliases: readonly ResolvedAlias[]): Promise<void>;
   processEnv(alias: ResolvedAlias, mode: EnvMode): Promise<ProcessEnv>;
+  /**
+   * True only when the CLI arguments surely just read (list, describe, get...).
+   * Anything uncertain must return false: production aliases then ask first.
+   */
+  isReadOnly(args: readonly string[]): boolean;
+  /** A URL that opens the cloud's web console as the alias, ideally already signed in. */
+  consoleUrl?(alias: ResolvedAlias, service?: string): Promise<ConsoleSignIn>;
   /** True when CLI output means the session expired and logging in again should fix it. */
   isSessionError(output: string): boolean;
 }

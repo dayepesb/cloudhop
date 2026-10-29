@@ -134,6 +134,7 @@ export function createApi(app: CloudhopApp, assistants?: AssistantsInstaller) {
           label: target?.label,
           missing: !target,
           region,
+          prod: alias.prod === true,
         })),
       };
     },
@@ -243,12 +244,29 @@ export function createApi(app: CloudhopApp, assistants?: AssistantsInstaller) {
       return { created: aliases.map((a) => a.name) };
     },
 
+    /** Changes an alias: any of `region`, `prod` (production mark) and `name` (rename, applied last). */
     'PATCH /api/aliases/:name': async ([name], body) => {
-      const resolved = await app.resolveAlias(name as string);
-      const region = text(body, 'region');
-      regionCheck(resolved.source, region);
-      await app.setAliasRegion(name as string, region);
-      return { name, region };
+      let current = name as string;
+      if ('region' in body) {
+        const resolved = await app.resolveAlias(current);
+        const region = text(body, 'region');
+        regionCheck(resolved.source, region);
+        await app.setAliasRegion(current, region);
+      }
+      if (typeof body.prod === 'boolean') await app.setProduction([current], body.prod);
+      if ('name' in body) {
+        const to = text(body, 'name');
+        await app.renameAlias(current, to);
+        current = to;
+      }
+      return { name: current };
+    },
+
+    /** Opens the web console in the user's browser; the sign-in URL never reaches the page. */
+    'POST /api/aliases/:name/console': async ([name], body) => {
+      const service = text(body, 'service');
+      const via = await app.openConsole(name as string, service ? { service } : {});
+      return { via };
     },
 
     'DELETE /api/aliases/:name': async ([name]) => {

@@ -50,11 +50,17 @@ test('shows sources and aliases, and hides the token from the address bar', asyn
   uiUrl,
 }) => {
   await page.goto(uiUrl);
-  await expect(page.getByRole('heading', { name: 'demo' })).toBeVisible();
-  await expect(page.getByText('Session valid')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Aliases', level: 1 })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'demo-dev', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'demo-account / Dev' })).toBeVisible();
   expect(page.url()).not.toContain('token');
+
+  await page.getByRole('link', { name: 'Sources' }).click();
+  await expect(page.getByRole('heading', { name: 'demo', exact: true })).toBeVisible();
+  await expect(page.getByText('Session valid')).toBeVisible();
+  await page.getByRole('button', { name: 'View aliases →' }).click();
+  await expect(page).toHaveURL(/#\/aliases\?source=demo$/);
+  await expect(page.getByRole('cell', { name: 'demo-dev', exact: true })).toBeVisible();
 });
 
 test('changes a region and rejects typos', async ({ page, uiUrl, box }) => {
@@ -102,6 +108,7 @@ test('removes an alias and then the whole source', async ({ page, uiUrl, box }) 
   await expect(page.getByRole('cell', { name: 'demo-dev', exact: true })).toBeHidden();
   expect(await box.readConfig()).not.toContain('demo-dev');
 
+  await page.getByRole('link', { name: 'Sources' }).click();
   await page.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Add your first account' })).toBeVisible();
   expect(await box.readConfig()).not.toContain('demo:');
@@ -110,7 +117,7 @@ test('removes an alias and then the whole source', async ({ page, uiUrl, box }) 
 test('fits a phone screen without sideways scrolling', async ({ page, uiUrl }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(uiUrl);
-  await expect(page.getByRole('heading', { name: 'demo' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'demo-dev', exact: true })).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
@@ -119,6 +126,7 @@ test('fits a phone screen without sideways scrolling', async ({ page, uiUrl }) =
 
 test('teaches an AI assistant from the page', async ({ page, uiUrl, box }) => {
   await page.goto(uiUrl);
+  await page.getByRole('link', { name: 'AI assistants' }).click();
   const card = page.locator('#assistants');
   await expect(card.getByRole('heading', { name: 'AI assistants' })).toBeVisible();
   const kiro = card.getByRole('row', { name: /^Kiro/ });
@@ -130,4 +138,20 @@ test('teaches an AI assistant from the page', async ({ page, uiUrl, box }) => {
     'utf8',
   );
   expect(skill).toContain('name: cloudhop');
+});
+
+test('filters aliases and shows the tools page', async ({ page, uiUrl }) => {
+  await page.goto(uiUrl);
+  const filter = page.getByLabel('Filter aliases');
+  await filter.fill('nothing-like-this');
+  await expect(page.getByText('No alias matches these filters.')).toBeVisible();
+  await filter.fill('demo acc');
+  await expect(page.getByRole('cell', { name: 'demo-dev', exact: true })).toBeVisible();
+  await expect(page.getByText('1 of 1')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Tools' }).click();
+  await expect(page.getByRole('heading', { name: 'Tools', level: 1 })).toBeVisible();
+  await expect(page.getByText('cloudhop shell install')).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole('heading', { name: 'Aliases', level: 1 })).toBeVisible();
 });

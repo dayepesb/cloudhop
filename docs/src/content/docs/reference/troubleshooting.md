@@ -67,6 +67,24 @@ The server was paused (often with <kbd>Ctrl</kbd>+<kbd>Z</kbd>). Run `fg` in
 that terminal, or stop it with <kbd>Ctrl</kbd>+<kbd>C</kbd> and run
 `cloudhop ui` again.
 
+## "… is production and … may change resources"
+
+The alias is marked as production and the command isn't read-only. In a
+terminal cloudhop asks you; in scripts and AI assistants it refuses. If a
+person approved that exact command, run it with `CLOUDHOP_CONFIRM_PROD=1`.
+See [Protect production](/cloudhop/guides/production/).
+
+## `cloudhop use` says it needs the shell integration
+
+Run `cloudhop shell install` and open a new terminal. See
+[Shell integration](/cloudhop/guides/shell/).
+
+## The console opens through the portal, or at the sign-in page
+
+AWS didn't accept a direct sign-in for that role or account, so cloudhop
+used the access portal's link (SSO) or the console sign-in page (personal
+accounts) instead. Everything else works the same.
+
 ## My AI assistant doesn't use cloudhop
 
 - Start a **new chat** (or restart the assistant): skills and MCP servers load

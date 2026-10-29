@@ -1,23 +1,31 @@
+import { basename } from 'node:path';
 import { defaultConfigDir } from '@cloudhop/adapters-node';
 import { CloudhopError, RESERVED_NAMES } from '@cloudhop/core';
 import { serveMcp } from '@cloudhop/mcp';
 import { addCommand, aliasCommand } from './commands/add';
 import { agentCommand } from './commands/agent';
+import { consoleCommand } from './commands/console';
+import { eachCommand } from './commands/each';
 import {
   listCommand,
   loginCommand,
+  prodCommand,
   providerCommand,
   regionCommand,
   removeCommand,
+  renameCommand,
   statusCommand,
   syncCommand,
 } from './commands/manage';
 import { execCommand, proxyCommand } from './commands/run';
 import { doctorCommand, setupCommand } from './commands/setup';
+import { completeCommand, shellCommand, useCommand } from './commands/shell';
+import { teamCommand } from './commands/team';
 import { uiCommand } from './commands/ui';
 import { createApp, createAssistants } from './container';
-import { parseArgs } from './flags';
-import { notify, PromptCancelled } from './ui';
+import { interactive, parseArgs } from './flags';
+import { pickAlias } from './picker';
+import { answer, notify, PromptCancelled, p } from './ui';
 import { startUpdateCheck } from './update-check';
 
 declare const __CLOUDHOP_VERSION__: string;
@@ -27,6 +35,14 @@ Hop between cloud accounts, roles and regions with one command.
 
 Usage
   hop <alias> [args...]          Run the cloud CLI as <alias> (no args: who am I)
+  hop                            Pick the alias from a list, then type the command
+  hop - [args...]                Pick the alias from a list and run [args...]
+  cloudhop console [alias] [service] [--region <r>]
+                                 Open the web console as <alias>, already signed in
+  cloudhop each <selection...> [--source <s>] [--prod|--no-prod] [--yes] [--json] -- <args...>
+                                 Run one command in many aliases (names, a,b lists, 'globex-*', /regex/)
+  cloudhop use [alias] | --off    Use an alias in this shell (aws, terraform... without hop)
+  cloudhop shell [install]       Shell integration: cloudhop use, tab completion, cloudhop_prompt
   cloudhop exec <alias> [--region <r>] -- <cmd...>
                                  Run any tool with the alias' temporary credentials
 
@@ -35,8 +51,13 @@ Setup
   cloudhop add                   Add an SSO portal or a personal account
   cloudhop add aws sso --start-url <url> [--region <r>] [--name <id>]
   cloudhop add aws console-login [--region <r>] [--name <id>]
+  cloudhop team export [--out <file>] | team import <file|https URL>
+                                 Share portals and aliases with your team (no secrets)
   cloudhop alias [source]        Create more aliases from a source
   cloudhop alias <source> --list | --target <id> [--name <alias>] [--region <r>]
+  cloudhop mv <alias> <new-name> Rename an alias
+  cloudhop prod [alias...] [--off]
+                                 Mark aliases as production (asks before changes)
   cloudhop region <alias> [region]
                                  Change the region an alias runs in
   cloudhop login [source]        Log in again and refresh its accounts
@@ -72,6 +93,26 @@ function takeGlobalFlags(argv: string[]): string[] {
 async function main(argv: string[]): Promise<number> {
   const [command, ...args] = argv;
 
+  // `hop` on its own (or `hop - <args>`): pick the alias from a list.
+  const invokedAsHop = /^hop(\.js|\.cmd)?$/i.test(basename(process.argv[1] ?? ''));
+  if ((!command && invokedAsHop && interactive()) || command === '-') {
+    const app = createApp();
+    const alias = await pickAlias(app);
+    let rest = args;
+    if (!command) {
+      const typed = answer(
+        await p.text({
+          message: `aws command to run as ${alias}`,
+          placeholder: 'empty = who am I, e.g. s3 ls',
+        }),
+      ).trim();
+      rest = typed
+        ? (typed.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((w) => w.replace(/^(["'])(.*)\1$/, '$2'))
+        : [];
+    }
+    return proxyCommand(app, alias, rest);
+  }
+
   if (!command || command === 'help' || command === '--help' || command === '-h') {
     console.log(HELP);
     return 0;
@@ -84,6 +125,16 @@ async function main(argv: string[]): Promise<number> {
   const app = createApp();
   // Only the first argument belongs to cloudhop when proxying: `hop prod s3 ls --device-code` is aws' business.
   const local = RESERVED_NAMES.has(command) ? takeGlobalFlags(args) : args;
+
+  // Tab completion runs on every <Tab>: answer fast, with no side effects.
+  if (command === '__complete') {
+    await completeCommand(app, args[0]);
+    return 0;
+  }
+  if (command === 'shell') {
+    await shellCommand(local);
+    return 0;
+  }
 
   if (command === 'mcp') {
     // stdout belongs to the MCP protocol from here on: nothing else may print to it.
@@ -137,6 +188,13 @@ async function dispatch(
     case 'status':
       await statusCommand(app, local);
       return 0;
+    case 'prod':
+      await prodCommand(app, local);
+      return 0;
+    case 'mv':
+    case 'rename':
+      await renameCommand(app, local);
+      return 0;
     case 'region':
       await regionCommand(app, local);
       return 0;
@@ -164,6 +222,17 @@ async function dispatch(
       return execCommand(app, local);
     case 'agent':
       await agentCommand(assistants, local);
+      return 0;
+    case 'team':
+      await teamCommand(app, local);
+      return 0;
+    case 'use':
+      await useCommand(app, local);
+      return 0;
+    case 'each':
+      return eachCommand(app, args);
+    case 'console':
+      await consoleCommand(app, local);
       return 0;
     case 'ui':
       await uiCommand(app, assistants, parseArgs(local));

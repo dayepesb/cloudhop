@@ -34,6 +34,9 @@ class FakeProvider implements CloudProvider {
   readonly cli = { command: 'aws', displayName: 'AWS CLI', minVersion: '2.32.0' };
   readonly sourceKinds = [{ kind: 'sso', label: 'SSO', fields: [] }];
   readonly identityArgs = ['sts', 'get-caller-identity'];
+  isReadOnly(args: readonly string[]) {
+    return args[1]?.startsWith('list') ?? true;
+  }
   state: SessionState = 'valid';
   canRefresh = true;
   remoteTargets = [target('111/Admin'), target('222/ReadOnly')];
@@ -257,6 +260,30 @@ describe('CloudhopApp', () => {
       code: 'LOGIN_REQUIRED',
     });
     expect(provider.logins).toBe(0);
+  });
+
+  it('renames an alias and rewrites its profile', async () => {
+    await app.setProduction(['acme-prod'], true);
+    await app.renameAlias('acme-prod', 'acme-live');
+    expect((await app.config()).aliases[0]).toMatchObject({ name: 'acme-live', prod: true });
+    expect(provider.synced.at(-1)).toEqual(['acme-live']);
+    await expect(app.renameAlias('acme-live', 'sync')).rejects.toThrow(CloudhopError);
+    await expect(app.renameAlias('nope', 'x')).rejects.toMatchObject({ code: 'ALIAS_NOT_FOUND' });
+  });
+
+  it('marks and unmarks production aliases', async () => {
+    await app.setProduction(['acme-prod'], true);
+    expect((await app.aliasStatus('acme-prod')).prod).toBe(true);
+    await app.setProduction(['acme-prod'], false);
+    expect((await app.config()).aliases[0]?.prod).toBeUndefined();
+  });
+
+  it('asks for confirmation only for changes on production aliases', async () => {
+    expect(await app.needsProductionConfirmation('acme-prod', ['s3', 'rm'])).toBe(false);
+    await app.setProduction(['acme-prod'], true);
+    expect(await app.needsProductionConfirmation('acme-prod', ['s3', 'list-x'])).toBe(false);
+    expect(await app.needsProductionConfirmation('acme-prod', ['s3', 'rm'])).toBe(true);
+    expect(await app.needsProductionConfirmation('acme-prod')).toBe(true);
   });
 
   it('applies a region override', async () => {

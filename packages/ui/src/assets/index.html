@@ -126,9 +126,29 @@
       }
       /* Fixed columns so every source's table lines up with the others. */
       table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-      th:nth-child(1) { width: 26%; }
-      th:nth-child(2) { width: 190px; }
-      th:nth-child(4) { width: 56px; }
+      table.aliases th:nth-child(1) { width: 22%; }
+      table.aliases th:nth-child(2) { width: 15%; }
+      table.aliases th:nth-child(3) { width: 180px; }
+      table.aliases th:nth-child(5) { width: 264px; }
+      td.muted { color: var(--muted); font-size: 14px; }
+      .nav { display: flex; gap: 4px; margin-left: 12px; }
+      .nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: 8px; }
+      .nav a:hover { color: var(--text); background: var(--surface-2); }
+      .nav a[aria-current="page"] { color: var(--accent-strong); background: var(--accent-soft); font-weight: 600; }
+      .page-head { display: flex; align-items: flex-end; gap: 16px; margin: 4px 0 16px; flex-wrap: wrap; }
+      .page-head > div:first-child { flex: 1; min-width: 220px; }
+      .page-head h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+      .page-head p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+      .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+      .toolbar input[type="search"] { flex: 1 1 260px; }
+      .toolbar .count { color: var(--muted); font-size: 13px; }
+      .source-summary { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--muted); }
+      .card-body.padded { padding: 4px 16px 14px; }
+      .snippet { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 6px 6px 12px; margin-bottom: 8px; }
+      .snippet code { flex: 1; overflow-x: auto; white-space: nowrap; }
+      .tool-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 6px 0; }
+      .tool-row .snippet { margin: 0; flex: 1 1 220px; }
+      button.choice { width: 100%; text-align: left; background: var(--surface); }
       td { overflow-wrap: anywhere; }
       th {
         text-align: left;
@@ -241,23 +261,36 @@
         margin-bottom: 18px;
       }
       .notice.error { border-left-color: var(--bad); }
+      .row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; white-space: nowrap; }
+      .prod-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); cursor: pointer; }
+      .prod-tag { display: inline-block; white-space: nowrap; margin-left: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--bad); border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; vertical-align: 1px; }
+      tr.prod td:first-child { box-shadow: inset 3px 0 0 var(--bad); }
+      button.link.danger-hover:hover { color: var(--bad); }
       .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
       .seg button { border: 0; border-radius: 0; }
       .seg button + button { border-left: 1px solid var(--border); }
       .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
       .card-help { color: var(--muted); font-size: 14px; margin: 10px 16px 6px; }
+      .card-body.padded .card-help { margin: 8px 0 10px; }
       .muted-inline { color: var(--muted); font-weight: 400; font-size: 12px; }
       table.assistants th:nth-child(2) { width: 170px; }
       table.assistants th:nth-child(3) { width: 140px; }
       table.assistants th:nth-child(4) { width: 230px; }
       @media (max-width: 640px) {
         .tagline { display: none; }
-        th:nth-child(3), td:nth-child(3) { display: none; }
+        .nav { margin-left: 4px; overflow-x: auto; }
+        .nav a { padding: 6px 8px; }
+        table.aliases th:nth-child(2), table.aliases td:nth-child(2),
+        table.aliases th:nth-child(4), table.aliases td:nth-child(4),
+        table.assistants th:nth-child(3), table.assistants td:nth-child(3) { display: none; }
         td, th { padding: 8px 10px; }
         td.alias { white-space: normal; overflow-wrap: anywhere; }
         .region input { width: 96px; }
-        th:nth-child(1) { width: auto; }
-        th:nth-child(2) { width: 124px; }
+        table.aliases th:nth-child(1) { width: auto; }
+        table.aliases th:nth-child(3) { width: 124px; }
+        table.aliases th:nth-child(5) { width: 132px; }
+        .bar { flex-wrap: wrap; }
+        .row-actions { flex-wrap: wrap; }
         table.assistants th:nth-child(2) { width: 112px; }
         table.assistants th:nth-child(4) { width: 96px; }
         table.assistants .actions { flex-direction: column; align-items: flex-end; }
@@ -269,7 +302,12 @@
     <header>
       <div class="bar">
         <div class="logo"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 role=%22img%22 aria-label=%22cloudhop%22%3E%3Cdefs%3E%3ClinearGradient id=%22ch-bg%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%233BB8F5%22/%3E%3Cstop offset=%221%22 stop-color=%22%231450A8%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url(%23ch-bg)%22/%3E%3Cpath d=%22M8.5 47.5a5.5 5.5 0 0 1 5-5.5 6.8 6.8 0 0 1 13 1.6 4.4 4.4 0 0 1-.9 8.7H13.4a4.9 4.9 0 0 1-4.9-4.8z%22 fill=%22%23fff%22 fill-opacity=%22.55%22/%3E%3Cpath d=%22M31 44.6a7.6 7.6 0 0 1 7-7.6 9.6 9.6 0 0 1 18.2 2.6 6.3 6.3 0 0 1-1.3 12.5H38.3A7.4 7.4 0 0 1 31 44.6z%22 fill=%22%23fff%22/%3E%3Cpath d=%22M18 37.5C19 21 33 13.5 40.6 23%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.6%22 stroke-linecap=%22round%22 stroke-dasharray=%220.01 6.3%22/%3E%3Cpath d=%22M46 30.2l-7.4-2.1 5.4-4.3z%22 fill=%22%23fff%22 stroke=%22%23fff%22 stroke-width=%222.4%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E" alt="" width="28" height="28" /><span>cloud<span>hop</span></span></div>
-        <div class="tagline">Hop between cloud accounts, roles and regions</div>
+        <nav id="nav" class="nav" aria-label="Sections" hidden>
+          <a href="#/aliases" data-page="aliases">Aliases</a>
+          <a href="#/sources" data-page="sources">Sources</a>
+          <a href="#/assistants" data-page="assistants">AI assistants</a>
+          <a href="#/tools" data-page="tools">Tools</a>
+        </nav>
         <div class="spacer"></div>
         <button type="button" class="primary" id="add-source" hidden>+ Add source</button>
       </div>

@@ -71,6 +71,26 @@ El servidor se pausó (muchas veces con <kbd>Ctrl</kbd>+<kbd>Z</kbd>). Ejecuta
 `fg` en esa terminal, o detenlo con <kbd>Ctrl</kbd>+<kbd>C</kbd> y vuelve a
 ejecutar `cloudhop ui`.
 
+## "… is production and … may change resources"
+
+El alias está marcado como de producción y el comando no es de solo lectura.
+En una terminal, cloudhop te pregunta; en scripts y asistentes de IA, se
+niega. Si una persona aprobó ese comando exacto, ejecútalo con
+`CLOUDHOP_CONFIRM_PROD=1`. Consulta
+[Protege producción](/cloudhop/es/guides/production/).
+
+## `cloudhop use` dice que necesita la integración con la shell
+
+Ejecuta `cloudhop shell install` y abre una terminal nueva. Consulta
+[Integración con la shell](/cloudhop/es/guides/shell/).
+
+## La consola se abre a través del portal, o en la página de inicio de sesión
+
+AWS no aceptó un inicio de sesión directo para ese rol o cuenta, así que
+cloudhop usó en su lugar el enlace del portal de acceso (SSO) o la página de
+inicio de sesión de la consola (cuentas personales). Todo lo demás funciona
+igual.
+
 ## Mi asistente de IA no usa cloudhop
 
 - Abre un **chat nuevo** (o reinicia el asistente): las skills y los

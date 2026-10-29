@@ -49,12 +49,28 @@ cloudhop exec acme-prod --region ap-southeast-2 -- terraform plan
 
 ## Cambia el nombre de un alias
 
-Elimínalo y vuelve a crearlo con el nombre nuevo:
-
 ```bash
-cloudhop rm old-name
-cloudhop alias acme
+cloudhop mv globex-northwind-prod-01-globex-prod-ps-support-ops northwind-prod
 ```
+
+La cuenta, el rol, la región y la marca de producción se mantienen, y también
+su perfil de AWS (que cambia de nombre con él). En la interfaz web, usa el
+botón ✎.
+
+## Nombres cortos por defecto
+
+Cuando creas alias, cloudhop sugiere nombres cortos a partir de la cuenta:
+quita el prefijo propio del portal y los números del final
+(`Globex_Northwind_Prod_01` en el portal `globex` queda como `northwind-prod`)
+y agrega el rol solo cuando la misma cuenta tiene varios (`contoso-prod-admin`,
+`contoso-prod-support-ops`).
+
+## Alias de producción
+
+cloudhop pregunta si cada alias nuevo es de producción (y sugiere *yes* para
+nombres como `prod` o `live`). Los alias de producción preguntan antes de
+cualquier cambio. Consulta
+[Protege producción](/cloudhop/es/guides/production/).
 
 ## Elimina alias y fuentes
 

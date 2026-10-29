@@ -50,6 +50,15 @@ in `ARCHITECTURE.md`; read it once. These are the rules that matter day to day.
 - The web UI stays on `127.0.0.1` with the per-run token, Host/Origin checks
   and strict CSP; API responses never include tokens.
 - `hop` strips inherited `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN`.
+- Production aliases (`prod: true`): every path that runs a command (`hop`,
+  `exec`, `each`, MCP `run_cloud_cli`) must call
+  `needsProductionConfirmation` and ask, or refuse with
+  `PROD_CONFIRMATION_REQUIRED` without a terminal (`CLOUDHOP_CONFIRM_PROD=1`
+  is the only override). A provider's `isReadOnly` must return false when
+  unsure.
+- Console sign-in URLs are secrets: only `CloudhopApp.openConsole` sees them;
+  never print, log or return them to the web UI or MCP.
+- `cloudhop __complete` runs on every Tab: keep it fast and side-effect free.
 
 ## Tests and checks
 

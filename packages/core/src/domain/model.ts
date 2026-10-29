@@ -25,6 +25,8 @@ export interface Alias {
   source: string;
   target: string;
   region?: string;
+  /** Production: shown in red and protected against accidental changes. */
+  prod?: boolean;
 }
 
 export interface Config {

@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import {
   CloudhopError,
   type CloudProvider,
+  type ConsoleSignIn,
   type EnvMode,
   type LoginInteraction,
   type ProcessEnv,
@@ -13,6 +14,7 @@ import {
   type Target,
 } from '@cloudhop/core';
 import { type IniSection, writeManagedBlock } from './aws-config';
+import { consoleDestination, federatedConsoleUrl, portalShortcutUrl } from './console';
 import type { Fetch } from './http';
 import { PortalClient } from './sso/portal';
 import { refreshSsoToken, ssoLogin } from './sso/sso-login';
@@ -55,6 +57,53 @@ const CONSOLE_TARGET: Target = { id: 'console', label: 'Console sign-in', attrib
 export const ssoSessionName = (sourceId: string) => `cloudhop-${sourceId}`;
 /** Profile `aws login` manages for a personal-account source. */
 export const consoleProfileName = (sourceId: string) => `cloudhop-${sourceId}`;
+
+/** AWS CLI global options that take a value, so the value isn't mistaken for the service. */
+const GLOBAL_WITH_VALUE = new Set([
+  '--region',
+  '--output',
+  '--profile',
+  '--endpoint-url',
+  '--query',
+  '--color',
+  '--ca-bundle',
+  '--cli-read-timeout',
+  '--cli-connect-timeout',
+  '--cli-binary-format',
+]);
+
+/** Operation prefixes that only read. */
+const READ_VERBS =
+  /^(describe|list|get|head|lookup|search|scan|query|select|filter|tail|batch-get|check|preview|simulate|validate|estimate|test|wait|help|download|ls|presign)(-|$)/;
+
+/**
+ * Whether AWS CLI arguments only read. Conservative: unknown operations count
+ * as changes, so production aliases ask before running them.
+ */
+export function isAwsReadOnly(args: readonly string[]): boolean {
+  if (args.includes('--dryrun') || args.includes('--dry-run') || args.includes('help')) return true;
+  const words: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] as string;
+    if (arg.startsWith('--')) {
+      if (GLOBAL_WITH_VALUE.has(arg) && words.length < 2) i++;
+      continue;
+    }
+    words.push(arg);
+  }
+  const [service, operation] = words;
+  if (!service || !operation) return true; // `hop alias` (who am I) or `hop alias s3`
+  if (service === 'sts' || service === 'configure') return true;
+  if (service === 's3') {
+    if (operation === 'cp' || operation === 'sync') {
+      // Downloading to this machine reads; anything written to S3 changes it.
+      const destination = words[words.length - 1] ?? '';
+      return !destination.startsWith('s3://');
+    }
+    return operation === 'ls' || operation === 'presign';
+  }
+  return READ_VERBS.test(operation);
+}
 
 export class AwsProvider implements CloudProvider {
   readonly id = 'aws' as const;
@@ -205,6 +254,29 @@ export class AwsProvider implements CloudProvider {
         ? await this.exportedCredentials(profile)
         : await this.roleCredentials(resolved);
     return { AWS_PROFILE: undefined, ...credentials, ...regionEnv };
+  }
+
+  async consoleUrl(resolved: ResolvedAlias, service?: string): Promise<ConsoleSignIn> {
+    const destination = consoleDestination(resolved.region, service);
+    const sso = resolved.source.kind !== CONSOLE_LOGIN_KIND;
+    const credentials = sso
+      ? await this.roleCredentials(resolved)
+      : await this.exportedCredentials(consoleProfileName(resolved.source.id)).catch(() => ({}));
+    const url = await federatedConsoleUrl(credentials, destination, resolved.region, this.fetchFn);
+    if (url) return { url, via: 'signed-in' };
+    const attrs = resolved.target?.attributes ?? {};
+    const startUrl = resolved.source.settings.startUrl;
+    if (sso && startUrl && attrs.accountId && attrs.roleName) {
+      return {
+        url: portalShortcutUrl(startUrl, attrs.accountId, attrs.roleName, destination),
+        via: 'portal',
+      };
+    }
+    return { url: destination, via: 'sign-in-page' };
+  }
+
+  isReadOnly(args: readonly string[]): boolean {
+    return isAwsReadOnly(args);
   }
 
   isSessionError(output: string): boolean {

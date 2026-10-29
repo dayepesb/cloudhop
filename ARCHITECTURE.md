@@ -135,6 +135,20 @@ only after the user confirms.
 The core, the CLI commands and the web UI need no changes: the UI builds its
 forms from the provider's source kinds.
 
+## Production aliases and the console
+
+- An alias can be marked `prod`. Before running anything as a production
+  alias, `CloudhopApp.needsProductionConfirmation` asks the provider whether
+  the arguments only read (`CloudProvider.isReadOnly`, conservative: unknown
+  means "may change"). The CLI asks the person; without a terminal, the CLI
+  and the MCP server refuse until a person approves (`CLOUDHOP_CONFIRM_PROD=1`
+  or `confirm_production: true`).
+- `cloudhop console` uses `CloudProvider.consoleUrl`. For AWS it exchanges the
+  alias' short-lived role credentials for a one-time sign-in token with the
+  AWS sign-in federation endpoint (POST, no `SessionDuration`) and falls back
+  to the access portal's shortcut link. Only `CloudhopApp.openConsole` sees
+  the URL: it opens it and returns how the user got in.
+
 ## Web UI security
 
 `cloudhop ui` exposes the same actions as the CLI, so it is locked to the

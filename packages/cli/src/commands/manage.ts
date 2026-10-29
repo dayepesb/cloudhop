@@ -125,8 +125,9 @@ export async function listCommand(app: CloudhopApp, args: string[] = []): Promis
     );
     for (const { alias, target, region } of own) {
       const label = target ? target.label : paint('red', `${alias.target} (no longer available)`);
+      const tag = alias.prod ? `  ${paint('red', 'PROD')}` : '';
       console.log(
-        `  ${alias.name.padEnd(nameWidth)}${(region ?? '-').padEnd(regionWidth)}${label}`,
+        `  ${alias.name.padEnd(nameWidth)}${(region ?? '-').padEnd(regionWidth)}${label}${tag}`,
       );
     }
   }
@@ -269,7 +270,7 @@ export async function statusCommand(app: CloudhopApp, args: string[]): Promise<v
     if (flags.json) return printJson({ alias: status });
     const account = status.attributes.accountId ? ` (${status.attributes.accountId})` : '';
     console.log(
-      `${bold(paint('sky', status.name))} → ${status.label ?? status.target}${account}, ${status.region ?? 'no region'}`,
+      `${bold(paint('sky', status.name))} → ${status.label ?? status.target}${account}, ${status.region ?? 'no region'}${status.prod ? `  ${paint('red', 'PROD')}` : ''}`,
     );
     console.log(`  ${STATE_SHORT[status.session]}: ${NEXT_TEXT[status.next]}`);
     if (status.next === 'browser-sign-in') {
@@ -289,4 +290,39 @@ export async function statusCommand(app: CloudhopApp, args: string[]): Promise<v
       `${bold(paint('sky', source.id))}  ${STATE_SHORT[source.session]}: ${NEXT_TEXT[source.next]}`,
     );
   }
+}
+
+/**
+ * `cloudhop prod <alias...> [--off]`: marks aliases as production. hop and
+ * exec then ask before anything that may change resources, and AI assistants
+ * must get the user's OK.
+ */
+export async function prodCommand(app: CloudhopApp, args: string[]): Promise<void> {
+  const { positional, flags } = parseArgs(args);
+  if (positional.length === 0) {
+    const prod = (await app.overview()).aliases.filter((a) => a.prod).map((a) => a.name);
+    console.log(
+      prod.length ? `Production aliases: ${prod.join(', ')}` : 'No alias is marked as production.',
+    );
+    console.log(paint('dim', 'Mark one with `cloudhop prod <alias>`, unmark with `--off`.'));
+    return;
+  }
+  const on = !flags.off;
+  await app.setProduction(positional, on);
+  for (const name of positional) {
+    console.log(
+      on
+        ? `${paint('red', 'PROD')} ${name}: cloudhop asks before any change.`
+        : `${name} is no longer marked as production.`,
+    );
+  }
+}
+
+/** `cloudhop mv <alias> <new-name>`: renames an alias (and its AWS profile). */
+export async function renameCommand(app: CloudhopApp, args: string[]): Promise<void> {
+  const [from, to] = args;
+  if (!from || !to)
+    throw new CloudhopError('INVALID_NAME', 'Usage: cloudhop mv <alias> <new-name>');
+  await app.renameAlias(from, to);
+  console.log(`${from} → ${to}`);
 }

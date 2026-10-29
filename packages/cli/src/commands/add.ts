@@ -4,8 +4,10 @@ import {
   type CloudhopApp,
   CloudhopError,
   type CloudProvider,
+  looksLikeProduction,
   type ProviderId,
   type Source,
+  suggestAliases,
   suggestAliasName,
   type Target,
 } from '@cloudhop/core';
@@ -115,6 +117,7 @@ export async function chooseAliases(
   // Each alias gets its own region; the last one typed becomes the next default.
   const validateRegion = regionValidator(app, source);
   let defaultRegion = source.settings.region ?? '';
+  const suggestions = suggestAliases(targets, source.id, existing);
 
   const aliases: Alias[] = [];
   for (const target of selected) {
@@ -122,10 +125,7 @@ export async function chooseAliases(
     const suggestion = uniqueName(
       targets.length === 1 && target.id === 'console'
         ? source.id
-        : suggestAliasName(
-            target.attributes.accountName ?? target.label,
-            target.attributes.roleName ?? '',
-          ),
+        : (suggestions.get(target.id) ?? suggestAliasName(target.label)),
       existing,
     );
     const name =
@@ -147,6 +147,12 @@ export async function chooseAliases(
           validate: (v) => (v?.trim() ? validateRegion?.(v.trim()) : undefined),
         }),
       ).trim() || defaultRegion;
+    const prod = answer(
+      await p.confirm({
+        message: `Is ${name} production? (cloudhop then asks before any change)`,
+        initialValue: looksLikeProduction(name, target.label),
+      }),
+    );
     defaultRegion = region;
     existing.add(name);
     aliases.push({
@@ -154,6 +160,7 @@ export async function chooseAliases(
       source: source.id,
       target: target.id,
       ...(region && region !== source.settings.region ? { region } : {}),
+      ...(prod ? { prod: true } : {}),
     });
   }
   return aliases;
@@ -268,16 +275,20 @@ export async function aliasCommand(
         `See the options with \`cloudhop alias ${id} --list\`.`,
       );
     }
-    const name =
-      flags.name ??
-      suggestAliasName(
-        target.attributes.accountName ?? target.label,
-        target.attributes.roleName ?? '',
-      );
+    const taken = new Set((await app.config()).aliases.map((a) => a.name));
+    const name = flags.name ?? suggestAliases(targets, id, taken).get(target.id) ?? id;
     await app.addAliases([
-      { name, source: id, target: target.id, ...(flags.region ? { region: flags.region } : {}) },
+      {
+        name,
+        source: id,
+        target: target.id,
+        ...(flags.region ? { region: flags.region } : {}),
+        ...(flags.prod ? { prod: true } : {}),
+      },
     ]);
-    console.log(`Alias "${name}" → ${target.label}. Try:  hop ${name}`);
+    console.log(
+      `Alias "${name}" → ${target.label}${flags.prod ? ' (production)' : ''}. Try:  hop ${name}`,
+    );
     return;
   }
   if (scripted) {

@@ -43,6 +43,11 @@ Don't start several cloud commands in parallel while a sign-in is pending.
   Never add `--profile`. Use `--region <r>` only to override the region once.
   With the MCP server, use `run_cloud_cli` with `args` (no program name).
 - **Who am I**: `hop <alias>` with no arguments (or the `whoami` tool).
+- **The same command in several aliases** (after the user chose them):
+  `cloudhop each a,b,c --yes -- <aws arguments>`; add `--json` to parse the
+  results.
+- **The AWS web console**: `cloudhop console <alias> [service]` opens it in
+  the user's browser, already signed in. Never try to print or fetch its URL.
 - **Other tools** (Terraform, CDK, SDK scripts):
   `cloudhop exec <alias> -- <command>`, e.g.
   `cloudhop exec acme-dev -- terraform plan`.
@@ -58,9 +63,15 @@ Don't start several cloud commands in parallel while a sign-in is pending.
 - Before any command that **creates, changes, deletes or costs money**, show
   the alias, account, region and the exact command, and wait for the user's
   explicit "yes". One confirmation covers one command, not a series.
-- Treat aliases or accounts that look like production (`prod`, `prd`,
-  `production`, `live`) with extra care: confirm every change, and suggest a
-  dry run (`--dryrun`, `terraform plan`) first.
+- **Production aliases** have `"prod": true` in `cloudhop ls --json` (and
+  `PROD` in `cloudhop ls`). Confirm every change there and suggest a dry run
+  (`--dryrun`, `terraform plan`) first. cloudhop enforces it: without a
+  terminal, `hop`/`cloudhop exec` refuse changes on production with
+  `PROD_CONFIRMATION_REQUIRED`. After the user explicitly approves the exact
+  command, rerun it with `CLOUDHOP_CONFIRM_PROD=1` in that command's
+  environment (with MCP: `confirm_production: true`). Never set it on your own.
+- Treat aliases or accounts that merely look like production (`prd`, `live`)
+  the same way, even if they are not marked.
 - Don't change cloudhop itself (`cloudhop add`, `rm`, `region`, `login` for
   another source) unless the user asked for it.
 

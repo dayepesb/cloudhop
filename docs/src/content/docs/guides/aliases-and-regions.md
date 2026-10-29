@@ -48,12 +48,25 @@ cloudhop exec acme-prod --region ap-southeast-2 -- terraform plan
 
 ## Rename an alias
 
-Remove it and create it again with the new name:
-
 ```bash
-cloudhop rm old-name
-cloudhop alias acme
+cloudhop mv globex-northwind-prod-01-globex-prod-ps-support-ops northwind-prod
 ```
+
+The account, role, region and production mark stay, and so does its AWS
+profile (renamed too). In the web UI, use the ✎ button.
+
+## Short names by default
+
+When you create aliases, cloudhop suggests short names from the account: it
+drops the portal's own prefix and trailing numbers (`Globex_Northwind_Prod_01`
+in the `globex` portal becomes `northwind-prod`) and adds the role only when
+the same account has several (`contoso-prod-admin`, `contoso-prod-support-ops`).
+
+## Production aliases
+
+cloudhop asks whether each new alias is production (and suggests *yes* for
+names like `prod` or `live`). Production aliases ask before any change. See
+[Protect production](/cloudhop/guides/production/).
 
 ## Remove aliases and sources
 

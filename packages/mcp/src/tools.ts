@@ -144,6 +144,11 @@ export function createTools(app: CloudhopApp): McpTool[] {
             type: 'string',
             description: "Optional region for this call only; defaults to the alias' region.",
           },
+          confirm_production: {
+            type: 'boolean',
+            description:
+              'Only for production aliases (prod: true) and commands that may change resources: set it to true after the user explicitly approved this exact command.',
+          },
         },
         required: ['alias', 'args'],
         additionalProperties: false,
@@ -172,6 +177,17 @@ export function createTools(app: CloudhopApp): McpTool[] {
         }
         const region =
           typeof args.region === 'string' && args.region.trim() ? args.region.trim() : undefined;
+        if (
+          args.confirm_production !== true &&
+          (await app.needsProductionConfirmation(alias, cliArgs))
+        ) {
+          const status = await app.aliasStatus(alias);
+          throw new CloudhopError(
+            'PROD_CONFIRMATION_REQUIRED',
+            `${alias} is PRODUCTION (${status.label ?? status.target}, ${status.region ?? 'default region'}) and this command may change resources.`,
+            'Show the user the alias, account, region and the exact command, and ask for explicit approval. Only if they approve, call run_cloud_cli again with confirm_production: true.',
+          );
+        }
         const result = await app.captureAsAlias(alias, cliArgs, region ? { region } : {});
         return {
           alias,

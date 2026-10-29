@@ -13,6 +13,18 @@ cloudhop inicia un pequeño servidor web en tu computador y lo abre en tu
 navegador. Todo lo que hagas ahí es igual que en la terminal: los alias que
 crees en la página funcionan con `hop` de inmediato, y viceversa.
 
+## Páginas
+
+| Página | Para qué sirve |
+| --- | --- |
+| **Aliases** (inicio) | Todos los alias en una tabla, con filtro (cualquier palabra, en cualquier orden), filtro por fuente y *Production only*. Cambia regiones, abre la consola, marca producción, renombra o quita. |
+| **Sources** | Tus portales SSO y cuentas personales: estado de la sesión, iniciar sesión, sincronizar, agregar alias, quitar. *View aliases →* abre la tabla de alias filtrada por esa fuente. |
+| **AI assistants** | Instala, actualiza o quita la skill y el servidor MCP de cloudhop, para ti o para este proyecto. |
+| **Tools** | El estado del AWS CLI y comandos listos para copiar: integración con la shell, ejecutar en varias cuentas y compartir con tu equipo. |
+
+Cada página tiene su propia dirección (`#/aliases`, `#/sources`,
+`#/assistants`, `#/tools`), así que el botón "atrás" del navegador funciona.
+
 ## Qué puedes hacer
 
 - **Agregar una fuente.** Haz clic en **+ Add source**, elige un portal de
@@ -24,6 +36,10 @@ crees en la página funcionan con `hop` de inmediato, y viceversa.
   fuente, con un filtro. Marca los que quieras y dale a cada uno un alias y
   una región. Las cuentas que ya tienen alias aparecen marcadas.
 - **Cambiar una región.** Edítala en la tabla y presiona <kbd>Enter</kbd>.
+- **Abrir la consola de AWS** como un alias, con la sesión ya iniciada, con
+  **Console**.
+- **Marcar producción** con la casilla **Prod**, y **cambiar el nombre** con
+  ✎.
 - **Volver a iniciar sesión o sincronizar** una fuente con sus botones.
 - **Eliminar** un alias (✕) o una fuente completa (**Remove**, pregunta
   antes).

@@ -22,6 +22,21 @@ alias' profile and region. With no arguments it runs
   from your shell, which would otherwise win over the profile.
 - Returns the exit code of `aws`.
 
+### `hop` and `hop - [args...]`
+
+With no alias, `hop` lets you pick it from a list (type to filter), then asks
+for the command. `hop - s3 ls` picks the alias and runs `aws s3 ls`.
+
+### `cloudhop console [alias] [service] [--region <r>]`
+
+Opens the AWS console as the alias, already signed in. See
+[Open the AWS console](/cloudhop/guides/console/).
+
+### `cloudhop each <selection...> [--source <s>] [--prod|--no-prod] [--parallel <n>] [--yes] [--json] -- <args...>`
+
+Runs one `aws` command in many aliases. See
+[Run in many accounts](/cloudhop/guides/many-accounts/).
+
 ### `cloudhop exec <alias> [--region <r>] -- <command...>`
 
 Runs any command with the alias' temporary credentials in its environment
@@ -47,6 +62,8 @@ Runs any command with the alias' temporary credentials in its environment
 | `cloudhop alias <source> --list` | Print the source's accounts and roles with their ids. |
 | `cloudhop alias <source> --target <id> [--name <alias>] [--region <r>]` | Create one alias without questions. |
 | `cloudhop region <alias> [region]` | Change the region of an alias (asks when you leave it out). |
+| `cloudhop mv <alias> <new-name>` | Rename an alias (and its AWS profile). |
+| `cloudhop prod [alias...] [--off]` | Mark aliases as production, or list them. See [Protect production](/cloudhop/guides/production/). |
 | `cloudhop rm <name...> [--yes]` | Remove aliases, or sources with their aliases. Removing a source asks first; `--yes` skips it. |
 | `cloudhop rm --source <id>` | Remove a source when an alias has the same name. |
 | `cloudhop ls [source] [--json]` | List sources with their session state and aliases. `--json` prints the same data for scripts and AI assistants. |
@@ -58,6 +75,15 @@ Runs any command with the alias' temporary credentials in its environment
 | --- | --- |
 | `cloudhop login [source]` | Sign in again now and refresh the source's accounts and roles. |
 | `cloudhop sync [source]` | Refresh the accounts and roles of one or every source. |
+
+## Shell and team
+
+| Command | What it does |
+| --- | --- |
+| `cloudhop use [alias] \| --off` | Use an alias in the current shell (needs the shell integration). |
+| `cloudhop shell [zsh\|bash\|fish\|pwsh]` | Print the shell integration. `cloudhop shell install` adds it to your startup file. See [Shell integration](/cloudhop/guides/shell/). |
+| `cloudhop team export [--sources <list>] [--out <file>]` | Export portals and aliases for your team (no secrets). |
+| `cloudhop team import <file\|https URL> [--yes]` | Import a team setup. See [Share with your team](/cloudhop/guides/team/). |
 
 ## AI assistants
 
@@ -93,4 +119,5 @@ Runs any command with the alias' temporary credentials in its environment
 | `CLOUDHOP_AWS_DIR` | The AWS folder to use instead of `~/.aws`. Handy for testing. |
 | `CLOUDHOP_DEVICE_CODE=1` | Always sign in with a device code. |
 | `CLOUDHOP_DEBUG=1` | Print full error details. |
+| `CLOUDHOP_CONFIRM_PROD=1` | A person approved this change on a production alias; don't ask (for scripts and AI assistants). |
 | `CLOUDHOP_NO_UPDATE_CHECK=1` | Don't check npm for a newer version (also off in CI and without a terminal). |

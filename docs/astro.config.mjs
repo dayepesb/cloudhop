@@ -37,6 +37,11 @@ export default defineConfig({
           items: [
             { slug: 'guides/hop-like-aws' },
             { slug: 'guides/ai-assistants' },
+            { slug: 'guides/console' },
+            { slug: 'guides/production' },
+            { slug: 'guides/many-accounts' },
+            { slug: 'guides/shell' },
+            { slug: 'guides/team' },
             { slug: 'guides/aws-sso' },
             { slug: 'guides/personal-accounts' },
             { slug: 'guides/aliases-and-regions' },
