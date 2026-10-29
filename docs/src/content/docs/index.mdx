@@ -23,7 +23,80 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkCard, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## The problem it solves
+
+If you work with AWS at a company, you probably have several SSO portals,
+dozens of accounts and a few roles in each, plus a personal account or two.
+Using them from the terminal means a lot of ceremony:
+
+<Tabs>
+  <TabItem label="Without cloudhop">
+    ```bash
+    # Once per portal, by hand: profiles for every account and role you use
+    aws configure sso                       # repeat for each account/role...
+    vim ~/.aws/config                       # ...or edit dozens of profiles by hand
+
+    # Every morning, and again whenever a session expires mid-task
+    aws sso login --profile acme-prod
+
+    # Every command: remember the exact profile name and region
+    aws s3 ls --profile AdministratorAccess-123456789012 --region us-east-1
+
+    # Personal accounts: long-lived access keys in ~/.aws/credentials
+    ```
+  </TabItem>
+  <TabItem label="With cloudhop">
+    ```bash
+    # Once per portal: sign in, tick the accounts you want, name them
+    cloudhop add
+
+    # Every command: a short alias that already knows account, role and region
+    hop acme-prod s3 ls
+
+    # Expired session? Nothing to do: cloudhop signs you in again and runs it
+    ```
+  </TabItem>
+</Tabs>
+
+No more copied keys, no more hand-written profiles, no more "the SSO session
+has expired" in the middle of your work.
+
+## How it works
+
+<Steps>
+
+1. **You add a source once.** A company SSO portal (IAM Identity Center) or
+   your personal account. cloudhop signs you in through the browser, exactly
+   like the AWS CLI does.
+
+2. **You pick accounts and name them.** cloudhop lists every account and role
+   you can use; the ones you choose become aliases, each with its own region.
+   They are written as normal profiles in `~/.aws/config`.
+
+3. **You use `hop <alias>` instead of `aws`.** cloudhop checks the session
+   (renewing it silently or opening the browser only if it really expired),
+   then runs the AWS CLI with that alias' profile and region.
+
+</Steps>
+
+## Just like the `aws` command
+
+`hop <alias>` **is** the AWS CLI: everything after the alias goes to `aws`
+untouched. Take any `aws` command you know, replace `aws` with `hop <alias>`,
+and drop `--profile`:
+
+| With the AWS CLI | With cloudhop |
+| --- | --- |
+| `aws s3 ls --profile acme-prod` | `hop acme-prod s3 ls` |
+| `aws sts get-caller-identity --profile acme-prod` | `hop acme-prod` |
+| `aws ec2 describe-instances --profile acme-prod --region eu-west-1` | `hop acme-prod ec2 describe-instances --region eu-west-1` |
+| `aws logs tail /app --follow --profile acme-dev` | `hop acme-dev logs tail /app --follow` |
+| `AWS_PROFILE=acme-prod terraform plan` | `cloudhop exec acme-prod -- terraform plan` |
+
+Output, pipes, `--output json`, `--query` and exit codes behave exactly as
+with `aws`. More in [Use hop like the aws command](guides/hop-like-aws/).
 
 ## From zero to your first command
 

@@ -35,6 +35,7 @@ export default defineConfig({
           label: 'Guides',
           translations: { es: 'Guías' },
           items: [
+            { slug: 'guides/hop-like-aws' },
             { slug: 'guides/aws-sso' },
             { slug: 'guides/personal-accounts' },
             { slug: 'guides/aliases-and-regions' },

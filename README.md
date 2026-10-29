@@ -60,7 +60,10 @@ copying access keys, editing `~/.aws/config` by hand and running
 | Remove an alias or a portal | `cloudhop rm acme-dev` |
 | Do all of it from the browser | `cloudhop ui` |
 
-Every setup command also works with flags, for scripts and dotfiles. See the
+`hop <alias>` is the AWS CLI with the account, role and region already chosen:
+pipes, `--output`, `--query` and exit codes work as with `aws`
+([more](https://dayepesb.github.io/cloudhop/guides/hop-like-aws/)). Every
+setup command also works with flags, for scripts and dotfiles. See the
 [command reference](https://dayepesb.github.io/cloudhop/reference/commands/).
 
 ## The local web UI
