@@ -1,0 +1,42 @@
+---
+title: cloudhop
+description: Salta entre cuentas, roles y regiones de la nube con un solo comando.
+template: splash
+hero:
+  tagline: Salta entre cuentas, roles y regiones de la nube con un solo comando. Login automático, sin copiar credenciales.
+  actions:
+    - text: Empezar
+      link: getting-started/
+      icon: right-arrow
+    - text: GitHub
+      link: https://github.com/dayepesb/cloudhop
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+```bash
+npm i -g cloudhop
+cloudhop setup
+hop acme-prod s3 ls
+```
+
+<CardGrid stagger>
+  <Card title="Un login por portal" icon="rocket">
+    Inicias sesión una vez en cada portal de IAM Identity Center y cloudhop
+    descubre todas las cuentas y roles a los que tienes acceso.
+  </Card>
+  <Card title="Login solo cuando hace falta" icon="approve-check">
+    La sesión se revisa cuando usas un alias. ¿Venció? cloudhop la renueva
+    en silencio o abre el navegador, y luego ejecuta tu comando.
+  </Card>
+  <Card title="Sin access keys" icon="lock">
+    Solo credenciales temporales: AWS SSO para empresas y `aws login` para
+    cuentas personales.
+  </Card>
+  <Card title="Funciona con tus herramientas" icon="puzzle">
+    Los perfiles viven en `~/.aws/config`, así que Terraform, los SDKs y los
+    IDEs usan los mismos alias.
+  </Card>
+</CardGrid>

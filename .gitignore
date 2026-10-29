@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.tgz
+.DS_Store
+.astro/
+docs/dist/
+packages/cli/README.md
+packages/cli/LICENSE

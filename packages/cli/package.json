@@ -1,0 +1,49 @@
+{
+  "name": "cloudhop",
+  "version": "0.1.0",
+  "description": "Hop between cloud accounts, roles and regions with one command. Automatic login, no copied credentials.",
+  "keywords": [
+    "cli",
+    "aws",
+    "sso",
+    "iam-identity-center",
+    "aws-login",
+    "multi-account",
+    "profiles",
+    "credentials",
+    "cloud"
+  ],
+  "license": "MIT",
+  "author": "dayepesb",
+  "homepage": "https://github.com/dayepesb/cloudhop#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dayepesb/cloudhop.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/dayepesb/cloudhop/issues"
+  },
+  "type": "module",
+  "bin": {
+    "cloudhop": "dist/cli.js",
+    "hop": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepack": "cp ../../README.md ../../LICENSE . && tsup"
+  },
+  "devDependencies": {
+    "@clack/prompts": "^1.8.1",
+    "@cloudhop/adapters-node": "workspace:*",
+    "@cloudhop/core": "workspace:*",
+    "@cloudhop/provider-aws": "workspace:*"
+  }
+}
