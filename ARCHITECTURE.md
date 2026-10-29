@@ -156,6 +156,29 @@ person at the keyboard:
 - **Adapters** are tested on their pure parts (rendering `~/.aws/config`,
   reading token caches, recognising expired-session errors) and with a fake
   `fetch` for HTTP calls.
+- **CLI end-to-end** (`e2e/*.e2e.test.ts`) runs the bundled `dist/cli.js` in a
+  sandbox (`CLOUDHOP_HOME`, `CLOUDHOP_AWS_DIR` and a fake SSO token in temp
+  folders): no network, no real configuration.
+- **Web UI end-to-end** (`e2e/web`) starts `cloudhop ui` on the same sandbox
+  and drives it with Playwright in Chromium.
+
+## Pipeline and releases
+
+`.github/workflows/pipeline.yml` runs on every push and pull request:
+
+| Stage | Jobs |
+| --- | --- |
+| Quality | Biome lint, TypeScript |
+| Tests | unit + CLI end-to-end on Linux, macOS and Windows; web UI in Chromium |
+| Security | CodeQL (`security-extended`), `pnpm audit`, gitleaks secret scan, dependency review on PRs |
+| Build | packs the npm tarball once and installs it as a user would; builds the docs |
+| Approval | on `main` only: waits for a reviewer to approve the `release` environment |
+| Deploy | publishes that same tarball to npm (trusted publishing, provenance) and the docs to GitHub Pages |
+
+To release, bump `version` in `packages/cli/package.json` and merge to `main`,
+then approve the run in GitHub. A version that is already on npm is skipped,
+so approving a docs-only change only redeploys the docs. Actions are pinned to
+commit SHAs and Dependabot keeps them and the dependencies up to date.
 
 ## Decision records
 

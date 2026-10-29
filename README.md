@@ -1,5 +1,8 @@
 # cloudhop
 
+[![Pipeline](https://github.com/dayepesb/cloudhop/actions/workflows/pipeline.yml/badge.svg)](https://github.com/dayepesb/cloudhop/actions/workflows/pipeline.yml)
+[![npm](https://img.shields.io/npm/v/cloudhop)](https://www.npmjs.com/package/cloudhop)
+
 > 🚧 Early preview. AWS works today; Azure and Google Cloud are planned.
 
 Hop between cloud accounts, roles and regions with one command.
@@ -38,6 +41,9 @@ https://dayepesb.github.io/cloudhop (English and Spanish).
 ```bash
 pnpm install
 pnpm test        # unit tests
+pnpm build && pnpm test:e2e    # CLI end-to-end tests (sandboxed)
+pnpm exec playwright install chromium && pnpm test:web   # web UI tests
+pnpm audit       # dependency vulnerabilities
 pnpm typecheck
 pnpm lint
 pnpm build       # bundles packages/cli/dist/cli.js
@@ -45,7 +51,8 @@ node packages/cli/dist/cli.js --help
 pnpm docs:dev    # documentation site
 ```
 
-Read [ARCHITECTURE.md](ARCHITECTURE.md) before changing the code. Use
+Read [ARCHITECTURE.md](ARCHITECTURE.md) before changing the code; it also
+explains the pipeline and how releases are approved. Use
 `CLOUDHOP_HOME` and `CLOUDHOP_AWS_DIR` to try things without touching your
 real configuration.
 
