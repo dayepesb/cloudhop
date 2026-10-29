@@ -80,7 +80,8 @@ export class AssistantsInstaller {
 
   /** The skill as written to disk: the bundled content plus a footer naming the version. */
   get skillContent(): string {
-    return `${skill.trimEnd()}\n\n<!-- Installed by cloudhop ${this.options.cloudhopVersion}. Refresh with \`cloudhop agent update\`; edits here are kept. -->\n`;
+    // LF everywhere: a Windows checkout may hand the bundler CRLF, which breaks the frontmatter.
+    return `${skill.replace(/\r\n/g, '\n').trimEnd()}\n\n<!-- Installed by cloudhop ${this.options.cloudhopVersion}. Refresh with \`cloudhop agent update\`; edits here are kept. -->\n`;
   }
 
   /** Assistants that look installed on this machine. */

@@ -1,0 +1,4 @@
+# Keep LF in the repository and in every checkout, Windows included:
+# bundled assets (the AI skill, the web UI) must not change line endings.
+* text=auto eol=lf
+*.png binary

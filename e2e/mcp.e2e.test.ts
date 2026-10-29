@@ -10,10 +10,9 @@ let client: Client;
 /** Connects the official MCP SDK client to `cloudhop mcp`, as an AI assistant would. */
 async function connect(extraEnv: Record<string, string> = {}) {
   box = await sandbox({ seed: true });
-  const env = { ...box.env(), PATH: await fakeAwsPath(box.root), ...extraEnv } as Record<
-    string,
-    string
-  >;
+  // Windows calls it Path; set both spellings so the fake aws wins either way.
+  const path = await fakeAwsPath(box.root);
+  const env = { ...box.env(), PATH: path, Path: path, ...extraEnv } as Record<string, string>;
   client = new Client({ name: 'cloudhop-e2e', version: '1.0.0' });
   await client.connect(
     new StdioClientTransport({
