@@ -1,20 +1,32 @@
-# cloudhop
+<p align="center">
+  <img src="https://raw.githubusercontent.com/dayepesb/cloudhop/main/assets/logo.svg" width="96" height="96" alt="cloudhop logo">
+</p>
+
+<h1 align="center">cloudhop</h1>
+
+<p align="center">
+  Hop between cloud accounts, roles and regions with one command.<br>
+  Automatic login, no access keys.
+</p>
+
+<p align="center">
 
 [![Pipeline](https://github.com/dayepesb/cloudhop/actions/workflows/pipeline.yml/badge.svg)](https://github.com/dayepesb/cloudhop/actions/workflows/pipeline.yml)
 [![npm](https://img.shields.io/npm/v/cloudhop)](https://www.npmjs.com/package/cloudhop)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+
+</p>
 
 > 🚧 Early preview. AWS works today; Azure and Google Cloud are planned.
 
-Hop between cloud accounts, roles and regions with one command.
-
 ```bash
 npm i -g cloudhop
-cloudhop setup             # pick your clouds, add an SSO portal or personal account
+cloudhop setup                            # add an SSO portal or personal account
 
-hop acme-prod s3 ls          # runs `aws s3 ls` with the right account, role and region
-hop acme-prod                # who am I?
-cloudhop exec acme-prod -- terraform plan
-cloudhop ui                # or manage everything from a local web page
+hop acme-prod s3 ls                       # `aws s3 ls` with the right account, role and region
+hop acme-prod                             # who am I?
+cloudhop exec acme-prod -- terraform plan # any tool, with temporary credentials
+cloudhop ui                               # or manage everything from a local web page
 ```
 
 ## Why
@@ -34,7 +46,7 @@ cloudhop is a thin proxy over the AWS CLI that:
 
 ## Documentation
 
-https://dayepesb.github.io/cloudhop (English and Spanish).
+[dayepesb.github.io/cloudhop](https://dayepesb.github.io/cloudhop/), in English and Spanish.
 
 ## Contributing
 
@@ -58,4 +70,8 @@ real configuration.
 
 ## License
 
-MIT
+[Apache License 2.0](LICENSE). See [NOTICE](NOTICE).
+
+Contributions are welcome: read [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately as
+described in [SECURITY.md](SECURITY.md).

@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill-rule="evenodd" d="M81 36 64 0 47 36l-1 2-9-10a6 6 0 0 0-9 9l10 10h-2L0 64l36 17h2L28 91a6 6 0 1 0 9 9l9-10 1 2 17 36 17-36v-2l9 10a6 6 0 1 0 9-9l-9-9 2-1 36-17-36-17-2-1 9-9a6 6 0 1 0-9-9l-9 10v-2Zm-17 2-2 5c-4 8-11 15-19 19l-5 2 5 2c8 4 15 11 19 19l2 5 2-5c4-8 11-15 19-19l5-2-5-2c-8-4-15-11-19-19l-2-5Z" clip-rule="evenodd"/><path d="M118 19a6 6 0 0 0-9-9l-3 3a6 6 0 1 0 9 9l3-3Zm-96 4c-2 2-6 2-9 0l-3-3a6 6 0 1 1 9-9l3 3c3 2 3 6 0 9Zm0 82c-2-2-6-2-9 0l-3 3a6 6 0 1 0 9 9l3-3c3-2 3-6 0-9Zm96 4a6 6 0 0 1-9 9l-3-3a6 6 0 1 1 9-9l3 3Z"/><style>path{fill:#000}@media (prefers-color-scheme:dark){path{fill:#fff}}</style></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="cloudhop">
+  <defs>
+    <linearGradient id="ch-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#19c3d1"/>
+      <stop offset="1" stop-color="#0a6a82"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#ch-bg)"/>
+  <!-- the cloud you leave -->
+  <path d="M8.5 47.5a5.5 5.5 0 0 1 5-5.5 6.8 6.8 0 0 1 13 1.6 4.4 4.4 0 0 1-.9 8.7H13.4a4.9 4.9 0 0 1-4.9-4.8z" fill="#fff" fill-opacity=".55"/>
+  <!-- the cloud you land on -->
+  <path d="M31 44.6a7.6 7.6 0 0 1 7-7.6 9.6 9.6 0 0 1 18.2 2.6 6.3 6.3 0 0 1-1.3 12.5H38.3A7.4 7.4 0 0 1 31 44.6z" fill="#fff"/>
+  <!-- the hop -->
+  <path d="M18 37.5C19 21 33 13.5 40.6 23" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-dasharray="0.01 6.3"/>
+  <path d="M46 30.2l-7.4-2.1 5.4-4.3z" fill="#fff" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/>
+</svg>

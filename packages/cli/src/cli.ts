@@ -47,7 +47,7 @@ Options
   --device-code                  Log in with a code instead of the browser redirect
   -v, --version                  Show the version
 
-Docs: https://github.com/dayepesb/cloudhop`;
+Docs: https://dayepesb.github.io/cloudhop/`;
 
 /** Strips cloudhop's own flags; everything else is passed through untouched. */
 function takeGlobalFlags(argv: string[]): string[] {

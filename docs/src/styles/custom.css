@@ -1,0 +1,20 @@
+/* cloudhop brand: the teal of the logo, tuned for contrast in each theme. */
+:root {
+  --sl-color-accent-low: #0b3640;
+  --sl-color-accent: #19a9b8;
+  --sl-color-accent-high: #a8eef5;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #cdf3f6;
+  --sl-color-accent: #0a7f8f;
+  --sl-color-accent-high: #064954;
+}
+
+.hero img {
+  filter: drop-shadow(0 18px 40px rgb(10 106 130 / 35%));
+}
+
+.site-title {
+  letter-spacing: -0.02em;
+}

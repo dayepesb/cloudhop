@@ -1,0 +1,77 @@
+---
+title: Solución de problemas
+description: Problemas comunes y cómo resolverlos.
+---
+
+Empieza con:
+
+```bash
+cloudhop doctor          # ¿el AWS CLI está instalado y es lo bastante reciente?
+cloudhop ls              # qué fuentes y alias existen, y el estado de su sesión
+```
+
+Agrega `CLOUDHOP_DEBUG=1` antes de cualquier comando para ver los detalles
+completos del error.
+
+## "Invalid start url provided"
+
+AWS no reconoce la URL del portal. Cópiala de tu navegador mientras estás en
+la lista de cuentas del portal; se ve así:
+`https://<your-company>.awsapps.com/start`. No se guardó nada, así que solo
+ejecuta `cloudhop add` otra vez.
+
+## El navegador no se abre, o el inicio de sesión nunca termina
+
+- Copia la URL que imprime cloudhop y ábrela tú mismo.
+- En una máquina remota (SSH, contenedor), el navegador no puede llegar a
+  cloudhop. Usa el código de dispositivo:
+  `cloudhop login <source> --device-code`.
+
+## "The AWS CLI is not installed" o "too old"
+
+Ejecuta `cloudhop doctor`: te ofrece instalarlo o actualizarlo (Homebrew en
+macOS, winget en Windows) o te enlaza al instalador. Las cuentas personales
+necesitan AWS CLI 2.32.0 o más reciente.
+
+## "… already defines [profile x] outside cloudhop"
+
+`~/.aws/config` ya tiene un perfil escrito a mano con ese nombre. Elige otro
+nombre para el alias, o borra o cambia el nombre de tu perfil primero.
+cloudhop nunca sobrescribe perfiles que no creó.
+
+## Un alias dice "no longer available"
+
+Perdiste el acceso a esa cuenta o rol, o le cambiaron el nombre. Ejecuta
+`cloudhop sync <source>` para actualizar la lista, luego `cloudhop rm <alias>`
+y crea un alias nuevo si hace falta.
+
+## Un comando me sigue pidiendo iniciar sesión
+
+- Puede que tu empresa haya revocado la sesión o acortado su duración.
+  Inicia sesión una vez más con `cloudhop login <source>`.
+- Verifica que no haya un `AWS_PROFILE` ni variables de credenciales en tu
+  shell que apunten a otro lado cuando usas otras herramientas. `hop` las
+  ignora; las otras herramientas no.
+
+## Una cuenta personal no logra iniciar sesión
+
+- El AWS CLI debe ser 2.32.0 o más reciente (`cloudhop doctor`).
+- Un usuario IAM necesita la política `SignInLocalDevelopmentAccess`; los
+  usuarios root no necesitan nada más.
+
+## `cloudhop setup` dice que no es una terminal interactiva
+
+Lo ejecutaste desde un script, un pipe o el ejecutor de tareas de un editor.
+Ejecútalo en una terminal normal, o usa los flags descritos en
+[Scripts y automatización](/cloudhop/es/guides/scripting/).
+
+## La página web dice "cloudhop ui is not responding"
+
+El servidor se pausó (muchas veces con <kbd>Ctrl</kbd>+<kbd>Z</kbd>). Ejecuta
+`fg` en esa terminal, o detenlo con <kbd>Ctrl</kbd>+<kbd>C</kbd> y vuelve a
+ejecutar `cloudhop ui`.
+
+## ¿Sigues atascado?
+
+[Abre un issue](https://github.com/dayepesb/cloudhop/issues/new/choose) con
+la salida del comando que falla (quita antes los ids de cuenta y las URLs).

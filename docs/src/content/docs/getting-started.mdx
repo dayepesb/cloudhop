@@ -1,0 +1,101 @@
+---
+title: Getting started
+description: Install cloudhop, add your first account and run a command in a few minutes.
+---
+
+import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## What you need
+
+- **Node.js 20** or newer, to install cloudhop.
+- **AWS CLI v2**, to run `aws` commands through your aliases. Don't have it?
+  cloudhop offers to install it during setup.
+- Access to an **AWS IAM Identity Center** portal (a URL like
+  `https://acme.awsapps.com/start`) or a **personal AWS account**.
+
+## Set it up
+
+<Steps>
+
+1. **Install cloudhop**
+
+   ```bash
+   npm install --global cloudhop
+   ```
+
+   This gives you two commands: `cloudhop` for setup and `hop` for daily use.
+   They are the same program.
+
+2. **Run the setup**
+
+   ```bash
+   cloudhop setup
+   ```
+
+   The setup asks which clouds you use, checks that the AWS CLI is installed
+   and asks what you want to add:
+
+   <Tabs>
+     <TabItem label="Company SSO portal">
+       Choose **IAM Identity Center (SSO portal)** and paste your portal's
+       start URL, for example `https://acme.awsapps.com/start`, and its region.
+       Give it a short name such as `acme`.
+     </TabItem>
+     <TabItem label="Personal account">
+       Choose **Personal account (aws login)** and a default region. See
+       [Personal accounts](/cloudhop/guides/personal-accounts/) for what your
+       user needs.
+     </TabItem>
+   </Tabs>
+
+3. **Sign in in the browser**
+
+   A browser tab opens. Sign in as you always do and approve the request.
+   cloudhop then lists every account and role you can use.
+
+4. **Pick accounts and name your aliases**
+
+   Tick the accounts and roles you want (type to filter), then give each one
+   an alias and a region. Press <kbd>Enter</kbd> to accept a suggestion.
+
+   ```text
+   ◇  acme-production / AdministratorAccess
+   ◆  Alias (what you will type after `hop`)   acme-prod
+   ◆  Region for acme-prod                     us-east-1
+   ```
+
+5. **Use it**
+
+   ```bash
+   hop acme-prod                  # who am I? (aws sts get-caller-identity)
+   hop acme-prod s3 ls            # any aws command, as acme-prod
+   ```
+
+</Steps>
+
+## Daily use
+
+```bash
+hop acme-prod ec2 describe-instances      # run aws as an alias
+hop acme-prod s3 ls --region eu-west-1    # another region, just this once
+cloudhop exec acme-prod -- terraform plan # any tool, with temporary credentials
+cloudhop ls                               # what you have, grouped by portal
+```
+
+## When a session expires
+
+You don't have to do anything. The next time you use an alias, cloudhop:
+
+1. renews the session silently if it can, or
+2. opens the browser so you sign in again, refreshes the list of accounts and
+   roles of that portal, and
+3. runs your command.
+
+Nothing checks your sessions in the background.
+
+## Next steps
+
+- Add more portals or accounts: `cloudhop add`.
+- Create more aliases from a portal you already added: `cloudhop alias acme`.
+- Learn the vocabulary in [How it works](/cloudhop/concepts/).
+- Prefer a web page? Run [`cloudhop ui`](/cloudhop/guides/web-ui/).

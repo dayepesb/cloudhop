@@ -1,42 +1,78 @@
 ---
 title: cloudhop
-description: Salta entre cuentas, roles y regiones de la nube con un solo comando.
+description: Salta entre cuentas, roles y regiones de la nube con un solo comando. Inicio de sesión automático, sin access keys.
 template: splash
 hero:
-  tagline: Salta entre cuentas, roles y regiones de la nube con un solo comando. Login automático, sin copiar credenciales.
+  title: Cada cuenta de la nube, a un alias corto de distancia
+  tagline: >-
+    cloudhop inicia sesión por ti en tus portales de AWS SSO y cuentas
+    personales, le da a cada cuenta y rol un alias corto, y vuelve a iniciar
+    sesión solo cuando una sesión venció. Sin access keys ni credenciales
+    copiadas.
+  image:
+    file: ../../../assets/logo.svg
   actions:
     - text: Empezar
       link: getting-started/
       icon: right-arrow
+    - text: Cómo funciona
+      link: concepts/
+      variant: secondary
     - text: GitHub
       link: https://github.com/dayepesb/cloudhop
       icon: external
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## De cero a tu primer comando
 
 ```bash
-npm i -g cloudhop
-cloudhop setup
-hop acme-prod s3 ls
+npm install --global cloudhop
+cloudhop setup                 # agrega tu portal SSO, inicia sesión, elige cuentas
+hop acme-prod s3 ls            # ejecuta `aws s3 ls` con esa cuenta, rol y región
 ```
 
+Eso es todo. La próxima semana, cuando la sesión haya vencido,
+`hop acme-prod s3 ls` vuelve a iniciar sesión por sí solo y luego ejecuta tu
+comando.
+
+## Por qué cloudhop
+
 <CardGrid stagger>
-  <Card title="Un login por portal" icon="rocket">
-    Inicias sesión una vez en cada portal de IAM Identity Center y cloudhop
-    descubre todas las cuentas y roles a los que tienes acceso.
+  <Card title="Un inicio de sesión por portal" icon="rocket">
+    Inicia sesión una vez en cada portal de IAM Identity Center. cloudhop
+    encuentra todas las cuentas y roles que puedes usar y convierte los que
+    elijas en alias.
   </Card>
-  <Card title="Login solo cuando hace falta" icon="approve-check">
-    La sesión se revisa cuando usas un alias. ¿Venció? cloudhop la renueva
-    en silencio o abre el navegador, y luego ejecuta tu comando.
+  <Card title="Inicia sesión solo cuando hace falta" icon="approve-check">
+    Nada se ejecuta en segundo plano. Cuando usas un alias con la sesión
+    vencida, cloudhop la renueva en silencio o abre el navegador, y luego sigue.
   </Card>
-  <Card title="Sin access keys" icon="lock">
-    Solo credenciales temporales: AWS SSO para empresas y `aws login` para
-    cuentas personales.
+  <Card title="Nunca access keys" icon="seti:lock">
+    Solo credenciales temporales: IAM Identity Center para empresas y
+    `aws login` para cuentas personales. Nada que rotar, nada que se filtre.
   </Card>
   <Card title="Funciona con tus herramientas" icon="puzzle">
-    Los perfiles viven en `~/.aws/config`, así que Terraform, los SDKs y los
-    IDEs usan los mismos alias.
+    Los alias son perfiles reales en `~/.aws/config`, así que Terraform, los
+    SDKs y tu IDE también los ven. `cloudhop exec` cubre todo lo demás.
   </Card>
+  <Card title="Terminal o navegador" icon="laptop">
+    ¿Prefieres hacer clic? `cloudhop ui` abre una página local para agregar
+    portales, elegir cuentas y cambiar regiones.
+  </Card>
+  <Card title="Código abierto" icon="open-book">
+    Apache 2.0, desarrollado en abierto y publicado en npm con provenance
+    desde GitHub Actions.
+  </Card>
+</CardGrid>
+
+## ¿Y ahora qué?
+
+<CardGrid>
+  <LinkCard title="Primeros pasos" description="Instala, agrega tu primer portal y ejecuta un comando." href="getting-started/" />
+  <LinkCard title="Portales SSO de empresa" description="Varios portales, muchas cuentas, renovación automática." href="guides/aws-sso/" />
+  <LinkCard title="Cuentas personales" description="Tu propia cuenta de AWS sin access keys ni Identity Center." href="guides/personal-accounts/" />
+  <LinkCard title="Referencia de comandos" description="Todos los comandos y opciones." href="reference/commands/" />
 </CardGrid>

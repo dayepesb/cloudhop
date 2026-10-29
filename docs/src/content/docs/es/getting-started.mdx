@@ -1,0 +1,102 @@
+---
+title: Primeros pasos
+description: Instala cloudhop, agrega tu primera cuenta y ejecuta un comando en pocos minutos.
+---
+
+import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Qué necesitas
+
+- **Node.js 20** o más reciente, para instalar cloudhop.
+- **AWS CLI v2**, para ejecutar comandos `aws` a través de tus alias. ¿No lo
+  tienes? cloudhop te ofrece instalarlo durante la configuración.
+- Acceso a un portal de **AWS IAM Identity Center** (una URL como
+  `https://acme.awsapps.com/start`) o a una **cuenta personal de AWS**.
+
+## Configúralo
+
+<Steps>
+
+1. **Instala cloudhop**
+
+   ```bash
+   npm install --global cloudhop
+   ```
+
+   Esto te da dos comandos: `cloudhop` para la configuración y `hop` para el
+   uso diario. Son el mismo programa.
+
+2. **Ejecuta la configuración**
+
+   ```bash
+   cloudhop setup
+   ```
+
+   La configuración te pregunta qué nubes usas, verifica que el AWS CLI esté
+   instalado y te pregunta qué quieres agregar:
+
+   <Tabs>
+     <TabItem label="Portal SSO de empresa">
+       Elige **IAM Identity Center (SSO portal)** y pega la URL de inicio de
+       tu portal, por ejemplo `https://acme.awsapps.com/start`, y su región.
+       Dale un nombre corto como `acme`.
+     </TabItem>
+     <TabItem label="Cuenta personal">
+       Elige **Personal account (aws login)** y una región predeterminada.
+       Consulta [Cuentas personales](/cloudhop/es/guides/personal-accounts/)
+       para ver qué necesita tu usuario.
+     </TabItem>
+   </Tabs>
+
+3. **Inicia sesión en el navegador**
+
+   Se abre una pestaña del navegador. Inicia sesión como siempre y aprueba la
+   solicitud. Luego cloudhop lista todas las cuentas y roles que puedes usar.
+
+4. **Elige cuentas y nombra tus alias**
+
+   Marca las cuentas y roles que quieras (escribe para filtrar) y luego dale
+   a cada uno un alias y una región. Presiona <kbd>Enter</kbd> para aceptar
+   una sugerencia.
+
+   ```text
+   ◇  acme-production / AdministratorAccess
+   ◆  Alias (what you will type after `hop`)   acme-prod
+   ◆  Region for acme-prod                     us-east-1
+   ```
+
+5. **Úsalo**
+
+   ```bash
+   hop acme-prod                  # ¿quién soy? (aws sts get-caller-identity)
+   hop acme-prod s3 ls            # cualquier comando aws, como acme-prod
+   ```
+
+</Steps>
+
+## Uso diario
+
+```bash
+hop acme-prod ec2 describe-instances      # ejecuta aws con un alias
+hop acme-prod s3 ls --region eu-west-1    # otra región, solo esta vez
+cloudhop exec acme-prod -- terraform plan # cualquier herramienta, con credenciales temporales
+cloudhop ls                               # lo que tienes, agrupado por portal
+```
+
+## Cuando una sesión vence
+
+No tienes que hacer nada. La próxima vez que uses un alias, cloudhop:
+
+1. renueva la sesión en silencio si puede, o
+2. abre el navegador para que vuelvas a iniciar sesión, actualiza la lista de
+   cuentas y roles de ese portal, y
+3. ejecuta tu comando.
+
+Nada revisa tus sesiones en segundo plano.
+
+## Próximos pasos
+
+- Agrega más portales o cuentas: `cloudhop add`.
+- Crea más alias desde un portal que ya agregaste: `cloudhop alias acme`.
+- Aprende el vocabulario en [Cómo funciona](/cloudhop/es/concepts/).
+- ¿Prefieres una página web? Ejecuta [`cloudhop ui`](/cloudhop/es/guides/web-ui/).

@@ -1,0 +1,85 @@
+---
+title: Comandos
+description: Todos los comandos y opciones de cloudhop.
+---
+
+`cloudhop` y `hop` son el mismo programa. Usa `hop` para el trabajo diario y
+`cloudhop` para la configuración; ambos aceptan todos los comandos.
+
+## Ejecutar como un alias
+
+### `hop <alias> [args...]`
+
+Ejecuta el AWS CLI como el alias: `hop acme-prod s3 ls` ejecuta `aws s3 ls`
+con el perfil y la región del alias. Sin argumentos, ejecuta
+`aws sts get-caller-identity`, que muestra quién eres.
+
+- Primero inicia sesión si la sesión venció, y reintenta una vez si el AWS
+  CLI reporta una sesión vencida.
+- Todo lo que va después del alias pasa a `aws` sin cambios, incluidos
+  `--region` y `--output`.
+- Ignora `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`
+  de tu shell, que de otro modo tendrían prioridad sobre el perfil.
+- Devuelve el código de salida de `aws`.
+
+### `cloudhop exec <alias> [--region <r>] -- <command...>`
+
+Ejecuta cualquier comando con las credenciales temporales del alias en su
+entorno (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`,
+`AWS_REGION`, `AWS_DEFAULT_REGION`). Devuelve el código de salida del
+comando. Consulta
+[Uso con otras herramientas](/cloudhop/es/guides/other-tools/).
+
+## Configuración
+
+| Comando | Qué hace |
+| --- | --- |
+| `cloudhop setup` | Primer uso guiado: elige nubes, verifica el AWS CLI, agrega una fuente. Requiere una terminal. |
+| `cloudhop add` | Agrega un portal SSO o una cuenta personal, inicia sesión y crea alias. |
+| `cloudhop add aws sso --start-url <url> [--region <r>] [--name <id>]` | Lo mismo, sin preguntas. |
+| `cloudhop add aws console-login [--region <r>] [--name <id>]` | Agrega una cuenta personal sin preguntas. |
+| `cloudhop ui [--port <n>] [--no-open]` | Lo mismo, desde una [página web local](/cloudhop/es/guides/web-ui/). |
+
+## Alias
+
+| Comando | Qué hace |
+| --- | --- |
+| `cloudhop alias [source]` | Elige más cuentas y roles de una fuente y ponles nombre. |
+| `cloudhop alias <source> --list` | Imprime las cuentas y roles de la fuente con sus ids. |
+| `cloudhop alias <source> --target <id> [--name <alias>] [--region <r>]` | Crea un alias sin preguntas. |
+| `cloudhop region <alias> [region]` | Cambia la región de un alias (pregunta si no la indicas). |
+| `cloudhop rm <name...> [--yes]` | Elimina alias, o fuentes con sus alias. Eliminar una fuente pregunta antes; `--yes` omite la pregunta. |
+| `cloudhop rm --source <id>` | Elimina una fuente cuando un alias tiene el mismo nombre. |
+| `cloudhop ls [source]` | Lista las fuentes con el estado de su sesión y sus alias. |
+
+## Sesiones
+
+| Comando | Qué hace |
+| --- | --- |
+| `cloudhop login [source]` | Vuelve a iniciar sesión ahora y actualiza las cuentas y roles de la fuente. |
+| `cloudhop sync [source]` | Actualiza las cuentas y roles de una fuente o de todas. |
+
+## Nubes y herramientas
+
+| Comando | Qué hace |
+| --- | --- |
+| `cloudhop provider ls` | Lista las nubes que soporta cloudhop y cuáles están activadas. |
+| `cloudhop provider enable <id>` / `disable <id>` | Activa o desactiva una nube (hoy, `aws`). |
+| `cloudhop doctor` | Verifica que el CLI de cada nube activada esté instalado y sea lo bastante reciente, y ofrece instalarlo. |
+
+## Opciones globales
+
+| Opción | Qué hace |
+| --- | --- |
+| `--device-code` | Inicia sesión con un código que confirmas en cualquier dispositivo, en lugar de la redirección del navegador. Útil por SSH. |
+| `-v`, `--version` | Imprime la versión. |
+| `-h`, `--help` | Imprime la ayuda. |
+
+## Variables de entorno
+
+| Variable | Qué hace |
+| --- | --- |
+| `CLOUDHOP_HOME` | Dónde guarda cloudhop su configuración. Por defecto `~/.config/cloudhop` (o `$XDG_CONFIG_HOME/cloudhop`). |
+| `CLOUDHOP_AWS_DIR` | La carpeta de AWS que se usa en lugar de `~/.aws`. Útil para pruebas. |
+| `CLOUDHOP_DEVICE_CODE=1` | Siempre inicia sesión con un código de dispositivo. |
+| `CLOUDHOP_DEBUG=1` | Imprime los detalles completos de los errores. |

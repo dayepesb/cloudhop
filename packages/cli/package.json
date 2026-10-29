@@ -1,6 +1,6 @@
 {
   "name": "cloudhop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hop between cloud accounts, roles and regions with one command. Automatic login, no copied credentials.",
   "keywords": [
     "cli",
@@ -13,7 +13,7 @@
     "credentials",
     "cloud"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "dayepesb",
   "homepage": "https://github.com/dayepesb/cloudhop#readme",
   "repository": {
@@ -30,7 +30,8 @@
     "hop": "dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=20"
@@ -38,7 +39,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "prepack": "cp ../../README.md ../../LICENSE . && tsup"
+    "prepack": "cp ../../README.md ../../LICENSE ../../NOTICE . && tsup"
   },
   "devDependencies": {
     "@clack/prompts": "^1.8.1",

@@ -163,22 +163,79 @@ jobs:
         with:
           path: docs/dist
 
+  version:
+    name: Check version on npm
+    needs: package
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.check.outputs.publish }}
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - id: check
+        name: Is this version free and newer than latest?
+        env:
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          published=$(npm view cloudhop versions --json 2>/dev/null || echo '[]')
+          latest=$(npm view cloudhop dist-tags.latest 2>/dev/null || true)
+          node - "$VERSION" "$latest" "$published" <<'JS'
+          const [version, latest, publishedJson] = process.argv.slice(2);
+          const published = [].concat(JSON.parse(publishedJson || '[]'));
+          const parse = (v) => {
+            const [core, pre = ''] = v.split('-', 2);
+            return { nums: core.split('.').map(Number), pre };
+          };
+          // > 0 when a is newer than b; a prerelease sorts before its release.
+          const compare = (a, b) => {
+            const x = parse(a), y = parse(b);
+            for (let i = 0; i < 3; i++) if (x.nums[i] !== y.nums[i]) return x.nums[i] - y.nums[i];
+            if (x.pre === y.pre) return 0;
+            return x.pre === '' ? 1 : y.pre === '' ? -1 : x.pre < y.pre ? -1 : 1;
+          };
+          const fs = require('node:fs');
+          const out = (line) => fs.appendFileSync(process.env.GITHUB_OUTPUT, `${line}\n`);
+          const say = (line) => fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${line}\n`);
+
+          say('### npm version check');
+          say(`| package.json | latest on npm |\n| --- | --- |\n| \`${version}\` | \`${latest || 'none'}\` |\n`);
+          if (published.includes(version)) {
+            say(`ℹ️ \`${version}\` is already on npm, so npm is skipped and only the docs deploy. Bump \`packages/cli/package.json\` to release.`);
+            out('publish=false');
+          } else if (latest && compare(version, latest) <= 0) {
+            say(`❌ \`${version}\` is not newer than \`${latest}\`. Bump \`packages/cli/package.json\` above it.`);
+            console.log(`::error::cloudhop ${version} is not newer than ${latest} on npm.`);
+            process.exit(1);
+          } else {
+            say(`✅ \`${version}\` is free: approving publishes it to npm.`);
+            out('publish=true');
+          }
+          JS
+
   # ───────────── Release (main only) ─────────────
   approve:
     name: Approve release
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, test, web, codeql, audit, secrets, package, docs]
+    needs: [lint, test, web, codeql, audit, secrets, package, version, docs]
     runs-on: ubuntu-latest
     # The "release" environment requires a reviewer: the run pauses here until approved in GitHub.
     environment: release
     steps:
       - env:
           VERSION: ${{ needs.package.outputs.version }}
-        run: echo "Release of cloudhop $VERSION approved by $GITHUB_ACTOR."
+          PUBLISH: ${{ needs.version.outputs.publish }}
+        run: |
+          if [ "$PUBLISH" = "true" ]; then
+            echo "Approved by $GITHUB_ACTOR: publish cloudhop $VERSION to npm and deploy the docs."
+          else
+            echo "Approved by $GITHUB_ACTOR: deploy the docs ($VERSION is already on npm)."
+          fi
 
   publish-npm:
     name: Publish to npm
-    needs: [approve, package]
+    needs: [approve, package, version]
+    if: needs.version.outputs.publish == 'true'
     runs-on: ubuntu-latest
     environment:
       name: npm
@@ -195,17 +252,7 @@ jobs:
         with:
           name: npm-package
           path: pkg
-      - id: check
-        name: Skip if this version is already on npm
-        env:
-          VERSION: ${{ needs.package.outputs.version }}
-        run: |
-          if npm view "cloudhop@$VERSION" version > /dev/null 2>&1; then
-            echo "cloudhop@$VERSION is already on npm; bump packages/cli/package.json to release." >> "$GITHUB_STEP_SUMMARY"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.check.outputs.skip != 'true'
-        name: npm publish (trusted publishing + provenance)
+      - name: npm publish (trusted publishing + provenance)
         env:
           VERSION: ${{ needs.package.outputs.version }}
         run: |
