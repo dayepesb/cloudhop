@@ -1,18 +1,60 @@
-/* cloudhop brand: the teal of the logo, tuned for contrast in each theme. */
+/*
+ * cloudhop palette "sky and coral": navy surfaces, sky/blue for links and
+ * focus, coral for the main call to action. Same tokens as `cloudhop ui`.
+ */
 :root {
-  --sl-color-accent-low: #0b3640;
-  --sl-color-accent: #19a9b8;
-  --sl-color-accent-high: #a8eef5;
+  --sl-color-accent-low: #12304f;
+  --sl-color-accent: #3bb8f5;
+  --sl-color-accent-high: #c7e9fd;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #e8ecf7;
+  --sl-color-gray-2: #c3cbe0;
+  --sl-color-gray-3: #9aa6c3;
+  --sl-color-gray-4: #5f6b8a;
+  --sl-color-gray-5: #2a3555;
+  --sl-color-gray-6: #141c33;
+  --sl-color-black: #0b1124;
+
+  --cloudhop-cta: #ff7a59;
+  --cloudhop-cta-hover: #ff9478;
+  --cloudhop-on-cta: #2a0e05;
 }
 
 :root[data-theme='light'] {
-  --sl-color-accent-low: #cdf3f6;
-  --sl-color-accent: #0a7f8f;
-  --sl-color-accent-high: #064954;
+  --sl-color-accent-low: #dcebfb;
+  --sl-color-accent: #1767c2;
+  --sl-color-accent-high: #0b3a73;
+  --sl-color-white: #0f1730;
+  --sl-color-gray-1: #1b2540;
+  --sl-color-gray-2: #2a3555;
+  --sl-color-gray-3: #55617d;
+  --sl-color-gray-4: #8a96b3;
+  --sl-color-gray-5: #c9d1e3;
+  --sl-color-gray-6: #eef2f9;
+  --sl-color-gray-7: #f6f8fc;
+  --sl-color-black: #ffffff;
+
+  --cloudhop-cta: #c2410c;
+  --cloudhop-cta-hover: #9a3412;
+  --cloudhop-on-cta: #ffffff;
+}
+
+/* The main action (e.g. "Get started") is coral; everything else stays blue. */
+.sl-link-button.primary {
+  background: var(--cloudhop-cta);
+  border-color: var(--cloudhop-cta);
+  color: var(--cloudhop-on-cta);
+  font-weight: 600;
+}
+
+.sl-link-button.primary:hover {
+  background: var(--cloudhop-cta-hover);
+  border-color: var(--cloudhop-cta-hover);
+  color: var(--cloudhop-on-cta);
 }
 
 .hero img {
-  filter: drop-shadow(0 18px 40px rgb(10 106 130 / 35%));
+  filter: drop-shadow(0 18px 40px rgb(20 80 168 / 35%));
 }
 
 .site-title {

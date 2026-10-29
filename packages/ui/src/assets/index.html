@@ -4,39 +4,48 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>cloudhop</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 role=%22img%22 aria-label=%22cloudhop%22%3E%3Cdefs%3E%3ClinearGradient id=%22ch-bg%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%2319c3d1%22/%3E%3Cstop offset=%221%22 stop-color=%22%230a6a82%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url(%23ch-bg)%22/%3E%3Cpath d=%22M8.5 47.5a5.5 5.5 0 0 1 5-5.5 6.8 6.8 0 0 1 13 1.6 4.4 4.4 0 0 1-.9 8.7H13.4a4.9 4.9 0 0 1-4.9-4.8z%22 fill=%22%23fff%22 fill-opacity=%22.55%22/%3E%3Cpath d=%22M31 44.6a7.6 7.6 0 0 1 7-7.6 9.6 9.6 0 0 1 18.2 2.6 6.3 6.3 0 0 1-1.3 12.5H38.3A7.4 7.4 0 0 1 31 44.6z%22 fill=%22%23fff%22/%3E%3Cpath d=%22M18 37.5C19 21 33 13.5 40.6 23%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.6%22 stroke-linecap=%22round%22 stroke-dasharray=%220.01 6.3%22/%3E%3Cpath d=%22M46 30.2l-7.4-2.1 5.4-4.3z%22 fill=%22%23fff%22 stroke=%22%23fff%22 stroke-width=%222.4%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 role=%22img%22 aria-label=%22cloudhop%22%3E%3Cdefs%3E%3ClinearGradient id=%22ch-bg%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%233BB8F5%22/%3E%3Cstop offset=%221%22 stop-color=%22%231450A8%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url(%23ch-bg)%22/%3E%3Cpath d=%22M8.5 47.5a5.5 5.5 0 0 1 5-5.5 6.8 6.8 0 0 1 13 1.6 4.4 4.4 0 0 1-.9 8.7H13.4a4.9 4.9 0 0 1-4.9-4.8z%22 fill=%22%23fff%22 fill-opacity=%22.55%22/%3E%3Cpath d=%22M31 44.6a7.6 7.6 0 0 1 7-7.6 9.6 9.6 0 0 1 18.2 2.6 6.3 6.3 0 0 1-1.3 12.5H38.3A7.4 7.4 0 0 1 31 44.6z%22 fill=%22%23fff%22/%3E%3Cpath d=%22M18 37.5C19 21 33 13.5 40.6 23%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.6%22 stroke-linecap=%22round%22 stroke-dasharray=%220.01 6.3%22/%3E%3Cpath d=%22M46 30.2l-7.4-2.1 5.4-4.3z%22 fill=%22%23fff%22 stroke=%22%23fff%22 stroke-width=%222.4%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E" />
     <style>
+      /* cloudhop palette "sky and coral": sky/blue for accents and focus, coral for the main action. */
       :root {
-        --bg: #f6f7f9;
+        --bg: #f6f8fc;
         --surface: #ffffff;
-        --surface-2: #f1f3f6;
-        --border: #e2e6eb;
-        --text: #18202b;
-        --muted: #5d6877;
-        --accent: #0b8fa0;
-        --accent-strong: #08707e;
-        --accent-soft: #e0f4f6;
-        --ok: #1f8a4c;
-        --warn: #a86400;
-        --bad: #c23934;
+        --surface-2: #eef2f9;
+        --border: #dde3ef;
+        --text: #0f1730;
+        --muted: #55617d;
+        --accent: #1767c2;
+        --accent-strong: #0f4e99;
+        --accent-soft: #dcebfb;
+        --cta: #c2410c;
+        --cta-strong: #9a3412;
+        --on-cta: #ffffff;
+        --ok: #1a7f52;
+        --warn: #8a5a00;
+        --bad: #be123c;
+        --on-bad: #ffffff;
         --radius: 10px;
-        --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
+        --shadow: 0 1px 2px rgb(15 23 48 / 6%), 0 1px 3px rgb(15 23 48 / 8%);
         color-scheme: light;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #0f141a;
-          --surface: #161d25;
-          --surface-2: #1d2630;
-          --border: #2a3542;
-          --text: #e6ebf1;
-          --muted: #93a1b1;
-          --accent: #35c2d3;
-          --accent-strong: #5fd3e1;
-          --accent-soft: #123a41;
-          --ok: #4cc27f;
-          --warn: #e0a341;
-          --bad: #f06b66;
+          --bg: #0b1124;
+          --surface: #141c33;
+          --surface-2: #1b2540;
+          --border: #2a3555;
+          --text: #e8ecf7;
+          --muted: #9aa6c3;
+          --accent: #3bb8f5;
+          --accent-strong: #7fd0fa;
+          --accent-soft: #12304f;
+          --cta: #ff7a59;
+          --cta-strong: #ff9478;
+          --on-cta: #2a0e05;
+          --ok: #4cd19a;
+          --warn: #f5b84b;
+          --bad: #fb7185;
+          --on-bad: #2b0509;
           --shadow: none;
           color-scheme: dark;
         }
@@ -64,7 +73,7 @@
         gap: 16px;
       }
       .logo { font-weight: 700; font-size: 20px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
-      .logo span span { color: var(--accent); }
+      .logo span span { color: var(--cta); }
       .tagline { color: var(--muted); font-size: 14px; }
       .spacer { flex: 1; }
       main { max-width: 1040px; margin: 0 auto; padding: 24px 20px 64px; }
@@ -99,8 +108,8 @@
       }
       button:hover { background: var(--surface-2); }
       button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-      button.primary:hover { background: var(--accent-strong); }
+      button.primary { background: var(--cta); border-color: var(--cta); color: var(--on-cta); font-weight: 600; }
+      button.primary:hover { background: var(--cta-strong); border-color: var(--cta-strong); }
       button.danger { color: var(--bad); }
       button.link { border: none; background: none; color: var(--muted); padding: 4px 6px; }
       button.link:hover { color: var(--bad); }
@@ -115,7 +124,12 @@
         padding: 6px 10px;
         min-width: 0;
       }
-      table { width: 100%; border-collapse: collapse; }
+      /* Fixed columns so every source's table lines up with the others. */
+      table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      th:nth-child(1) { width: 26%; }
+      th:nth-child(2) { width: 190px; }
+      th:nth-child(4) { width: 56px; }
+      td { overflow-wrap: anywhere; }
       th {
         text-align: left;
         font-size: 12px;
@@ -126,7 +140,7 @@
         padding: 8px 16px;
       }
       td { padding: 8px 16px; border-top: 1px solid var(--border); vertical-align: middle; }
-      td.alias { font-weight: 600; white-space: nowrap; }
+      td.alias { font-weight: 600; }
       .region { display: flex; gap: 6px; align-items: center; }
       .region input { width: 140px; }
       .badge {
@@ -216,7 +230,7 @@
         box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
         font-size: 14px;
       }
-      .toast.error { background: var(--bad); color: #fff; }
+      .toast.error { background: var(--bad); color: var(--on-bad); }
       .toast small { display: block; opacity: 0.85; }
       .notice {
         border: 1px solid var(--border);
@@ -233,13 +247,15 @@
         td, th { padding: 8px 10px; }
         td.alias { white-space: normal; overflow-wrap: anywhere; }
         .region input { width: 96px; }
+        th:nth-child(1) { width: auto; }
+        th:nth-child(2) { width: 124px; }
       }
     </style>
   </head>
   <body>
     <header>
       <div class="bar">
-        <div class="logo"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 role=%22img%22 aria-label=%22cloudhop%22%3E%3Cdefs%3E%3ClinearGradient id=%22ch-bg%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%2319c3d1%22/%3E%3Cstop offset=%221%22 stop-color=%22%230a6a82%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url(%23ch-bg)%22/%3E%3Cpath d=%22M8.5 47.5a5.5 5.5 0 0 1 5-5.5 6.8 6.8 0 0 1 13 1.6 4.4 4.4 0 0 1-.9 8.7H13.4a4.9 4.9 0 0 1-4.9-4.8z%22 fill=%22%23fff%22 fill-opacity=%22.55%22/%3E%3Cpath d=%22M31 44.6a7.6 7.6 0 0 1 7-7.6 9.6 9.6 0 0 1 18.2 2.6 6.3 6.3 0 0 1-1.3 12.5H38.3A7.4 7.4 0 0 1 31 44.6z%22 fill=%22%23fff%22/%3E%3Cpath d=%22M18 37.5C19 21 33 13.5 40.6 23%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.6%22 stroke-linecap=%22round%22 stroke-dasharray=%220.01 6.3%22/%3E%3Cpath d=%22M46 30.2l-7.4-2.1 5.4-4.3z%22 fill=%22%23fff%22 stroke=%22%23fff%22 stroke-width=%222.4%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E" alt="" width="28" height="28" /><span>cloud<span>hop</span></span></div>
+        <div class="logo"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 role=%22img%22 aria-label=%22cloudhop%22%3E%3Cdefs%3E%3ClinearGradient id=%22ch-bg%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%233BB8F5%22/%3E%3Cstop offset=%221%22 stop-color=%22%231450A8%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url(%23ch-bg)%22/%3E%3Cpath d=%22M8.5 47.5a5.5 5.5 0 0 1 5-5.5 6.8 6.8 0 0 1 13 1.6 4.4 4.4 0 0 1-.9 8.7H13.4a4.9 4.9 0 0 1-4.9-4.8z%22 fill=%22%23fff%22 fill-opacity=%22.55%22/%3E%3Cpath d=%22M31 44.6a7.6 7.6 0 0 1 7-7.6 9.6 9.6 0 0 1 18.2 2.6 6.3 6.3 0 0 1-1.3 12.5H38.3A7.4 7.4 0 0 1 31 44.6z%22 fill=%22%23fff%22/%3E%3Cpath d=%22M18 37.5C19 21 33 13.5 40.6 23%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.6%22 stroke-linecap=%22round%22 stroke-dasharray=%220.01 6.3%22/%3E%3Cpath d=%22M46 30.2l-7.4-2.1 5.4-4.3z%22 fill=%22%23fff%22 stroke=%22%23fff%22 stroke-width=%222.4%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E" alt="" width="28" height="28" /><span>cloud<span>hop</span></span></div>
         <div class="tagline">Hop between cloud accounts, roles and regions</div>
         <div class="spacer"></div>
         <button type="button" class="primary" id="add-source" hidden>+ Add source</button>

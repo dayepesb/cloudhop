@@ -11,13 +11,29 @@ export function answer<T>(value: T): Exclude<T, symbol> {
   return value as Exclude<T, symbol>;
 }
 
-const dim = (text: string) => (process.stderr.isTTY ? `\x1b[2m${text}\x1b[22m` : text);
-export const bold = (text: string) => (process.stdout.isTTY ? `\x1b[1m${text}\x1b[22m` : text);
+/** Colors only for a terminal that wants them (https://no-color.org). */
+const colorful = (stream: NodeJS.WriteStream) => Boolean(stream.isTTY) && !process.env.NO_COLOR;
+const truecolor = /truecolor|24bit/i.test(process.env.COLORTERM ?? '');
 
-const ANSI = { dim: [2, 22], green: [32, 39], yellow: [33, 39], red: [31, 39], cyan: [36, 39] };
+const dim = (text: string) => (colorful(process.stderr) ? `\x1b[2m${text}\x1b[22m` : text);
+export const bold = (text: string) => (colorful(process.stdout) ? `\x1b[1m${text}\x1b[22m` : text);
+
+/**
+ * The "sky and coral" palette in the terminal: 24-bit colors when the
+ * terminal supports them, the closest 256-color shade otherwise.
+ */
+const STYLES = {
+  dim: ['2', '22'],
+  green: ['32', '39'],
+  yellow: ['33', '39'],
+  red: ['31', '39'],
+  sky: [truecolor ? '38;2;59;184;245' : '38;5;75', '39'],
+  coral: [truecolor ? '38;2;255;122;89' : '38;5;209', '39'],
+} as const;
+
 /** Colors stdout text when it goes to a terminal. */
-export const paint = (style: keyof typeof ANSI, text: string) =>
-  process.stdout.isTTY ? `\x1b[${ANSI[style][0]}m${text}\x1b[${ANSI[style][1]}m` : text;
+export const paint = (style: keyof typeof STYLES, text: string) =>
+  colorful(process.stdout) ? `\x1b[${STYLES[style][0]}m${text}\x1b[${STYLES[style][1]}m` : text;
 
 const BANNER = [
   '       _                    _  _',
@@ -26,11 +42,15 @@ const BANNER = [
   '| (__ | || (_) || |_| || (_| || | | || (_) || |_) |',
   ' \\___||_| \\___/  \\__,_| \\__,_||_| |_| \\___/ | .__/',
   '                                            |_|',
-].join('\n');
+];
+/** Where "hop" starts in the banner: "cloud" in sky, "hop" in coral, like the wordmark. */
+const HOP_COLUMN = 30;
 
 /** The cloudhop logo, shown when setup starts. */
 export function printBanner(): void {
-  console.log(paint('cyan', BANNER));
+  for (const line of BANNER) {
+    console.log(paint('sky', line.slice(0, HOP_COLUMN)) + paint('coral', line.slice(HOP_COLUMN)));
+  }
 }
 
 /** Progress messages go to stderr so piping a proxied command's output stays clean. */

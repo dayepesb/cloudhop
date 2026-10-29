@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="cloudhop">
   <defs>
     <linearGradient id="ch-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#19c3d1"/>
-      <stop offset="1" stop-color="#0a6a82"/>
+      <stop offset="0" stop-color="#3BB8F5"/>
+      <stop offset="1" stop-color="#1450A8"/>
     </linearGradient>
   </defs>
   <rect width="64" height="64" rx="15" fill="url(#ch-bg)"/>

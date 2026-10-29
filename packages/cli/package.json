@@ -1,21 +1,25 @@
 {
   "name": "cloudhop",
-  "version": "0.1.1",
-  "description": "Hop between cloud accounts, roles and regions with one command. Automatic login, no copied credentials.",
+  "version": "1.0.0",
+  "description": "Every cloud account, one short alias away. Sign in to AWS SSO portals and personal accounts once, hop between accounts, roles and regions with one command. No access keys.",
   "keywords": [
     "cli",
     "aws",
+    "aws-cli",
+    "aws-sso",
     "sso",
     "iam-identity-center",
     "aws-login",
     "multi-account",
     "profiles",
     "credentials",
-    "cloud"
+    "terraform",
+    "cloud",
+    "devops"
   ],
   "license": "Apache-2.0",
   "author": "dayepesb",
-  "homepage": "https://github.com/dayepesb/cloudhop#readme",
+  "homepage": "https://dayepesb.github.io/cloudhop/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dayepesb/cloudhop.git",

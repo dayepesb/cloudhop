@@ -83,7 +83,9 @@ export async function listCommand(app: CloudhopApp, sourceId?: string): Promise<
     const state = await provider.sessionState(source);
     const where = source.settings.startUrl ?? source.kind;
     if (index > 0) console.log('');
-    console.log(`${bold(source.id)}  ${paint('dim', `${provider.displayName} · ${where}`)}`);
+    console.log(
+      `${bold(paint('sky', source.id))}  ${paint('dim', `${provider.displayName} · ${where}`)}`,
+    );
     console.log(`  ${SESSION_LABEL[state]}`);
 
     const own = aliases.filter((a) => a.alias.source === source.id);
