@@ -56,15 +56,35 @@ class ApiError extends Error {
   }
 }
 
+// Calls that may sign in wait for the person in the browser; everything else should answer quickly.
+const MAY_SIGN_IN = /^\/api\/sources(\/[^/]+\/(login|sync|targets))?$/;
+const QUICK_TIMEOUT_MS = 20_000;
+
 async function api(method, path, body) {
-  const response = await fetch(path, {
-    method,
-    headers: {
-      'x-cloudhop-token': token ?? '',
-      ...(body ? { 'content-type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const waitsForPerson = MAY_SIGN_IN.test(path);
+  let response;
+  try {
+    response = await fetch(path, {
+      method,
+      headers: {
+        'x-cloudhop-token': token ?? '',
+        ...(body ? { 'content-type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: waitsForPerson ? undefined : AbortSignal.timeout(QUICK_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error.name === 'TimeoutError') {
+      throw new ApiError(
+        'cloudhop ui is not responding.',
+        'Is it paused in your terminal (Ctrl-Z)? Run `fg` there, or stop it and run `cloudhop ui` again.',
+      );
+    }
+    throw new ApiError(
+      'cloudhop ui is not running.',
+      'Run `cloudhop ui` again and open the new link it prints.',
+    );
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok)
     throw new ApiError(data.error ?? `Request failed (${response.status}).`, data.hint);
@@ -405,10 +425,11 @@ const slug = (text) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 63) || 'main';
 
-function openAddSource() {
+/** `previous` refills the form after a failed sign-in: { provider, kind, id, settings, error }. */
+function openAddSource(previous) {
   const providers = state.providers.filter((p) => state.enabledProviders.includes(p.id));
-  let provider = providers[0];
-  let kind = provider.kinds[0];
+  let provider = providers.find((p) => p.id === previous?.provider) ?? providers[0];
+  let kind = provider.kinds.find((k) => k.kind === previous?.kind) ?? provider.kinds[0];
 
   const form = h('form', { onsubmit: (e) => e.preventDefault() });
   const nameInput = h('input', {
@@ -417,7 +438,7 @@ function openAddSource() {
     class: 'mono',
     spellcheck: 'false',
   });
-  let nameTouched = false;
+  let nameTouched = Boolean(previous);
   nameInput.addEventListener('input', () => {
     nameTouched = true;
   });
@@ -444,7 +465,7 @@ function openAddSource() {
         const input = h('input', {
           id: `f-${f.key}`,
           placeholder: f.placeholder ?? f.defaultValue ?? '',
-          value: f.defaultValue ?? '',
+          value: previous?.settings?.[f.key] ?? f.defaultValue ?? '',
           required: true,
           class: 'mono',
           spellcheck: 'false',
@@ -474,7 +495,7 @@ function openAddSource() {
                 renderKinds();
               },
             },
-            providers.map((p) => h('option', { value: p.id }, p.name)),
+            providers.map((p) => h('option', { value: p.id, selected: p === provider }, p.name)),
           ),
         )
       : null;
@@ -504,6 +525,15 @@ function openAddSource() {
   }
 
   form.append(
+    previous?.error
+      ? h(
+          'div',
+          { class: 'notice error' },
+          h('strong', {}, 'Could not sign in, so nothing was saved. '),
+          previous.error.message,
+          previous.error.hint ? h('div', { class: 'help' }, previous.error.hint) : null,
+        )
+      : '',
     providerSelect ?? '',
     h('div', { class: 'field' }, h('label', {}, 'What do you want to add?')),
     kindsBox,
@@ -523,6 +553,7 @@ function openAddSource() {
     ),
   );
   renderKinds();
+  if (previous) nameInput.value = previous.id;
 
   const submit = h('button', { class: 'primary', type: 'submit' }, 'Add and sign in');
   form.addEventListener('submit', async () => {
@@ -552,11 +583,9 @@ function openAddSource() {
       toast(`Signed in to ${body.id}. ${report.targets.length} account/role(s) found.`);
       openAliasPicker(source, report.targets);
     } catch (error) {
-      fail(error);
+      // Nothing was saved: reopen the form with what was typed so it can be fixed.
       await refresh();
-      // A source that saved but failed to sign in shows up in the list with a Sign in button.
-      if (!state.sources.some((s) => s.id === body.id)) openAddSource();
-      else $dialog.close();
+      openAddSource({ ...body, error });
     }
   });
 

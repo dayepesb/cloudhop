@@ -94,11 +94,15 @@ export async function startUiServer({ app, port = 0 }: UiServerOptions): Promise
         sendJson(res, 401, { error: 'Open the link printed by `cloudhop ui`.' });
         return;
       }
-      if (req.method !== 'GET' && !req.headers['content-type']?.startsWith('application/json')) {
+      // Actions like remove, sign in or sync carry no body; anything that does must be JSON.
+      const hasBody =
+        Number(req.headers['content-length'] ?? 0) > 0 ||
+        req.headers['transfer-encoding'] !== undefined;
+      if (hasBody && !req.headers['content-type']?.startsWith('application/json')) {
         sendJson(res, 415, { error: 'Send JSON.' });
         return;
       }
-      const body = req.method === 'GET' ? {} : await readJson(req);
+      const body = hasBody ? await readJson(req) : {};
       const result = await handle({ method: req.method ?? 'GET', path: url.pathname, body });
       sendJson(res, result.status, result.body);
     } catch (error) {

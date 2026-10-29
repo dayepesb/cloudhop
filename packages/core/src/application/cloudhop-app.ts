@@ -128,6 +128,21 @@ export class CloudhopApp {
     await this.syncProfiles(source.provider);
   }
 
+  /**
+   * Adds a source and logs in to it. If that first login fails (a mistyped
+   * portal URL, a cancelled sign-in) the source is forgotten again, so nothing
+   * half-configured stays behind.
+   */
+  async connectSource(source: Source): Promise<SyncReport> {
+    await this.addSource(source);
+    try {
+      return await this.login(source.id);
+    } catch (error) {
+      await this.removeSource(source.id).catch(() => {});
+      throw error;
+    }
+  }
+
   async login(sourceId: string): Promise<SyncReport> {
     const config = await this.deps.config.load();
     const source = this.findSource(config, sourceId);

@@ -104,12 +104,15 @@ export async function ssoLogin(options: SsoLoginOptions): Promise<CachedToken> {
       : await authorizationCodeLogin(options);
   } catch (error) {
     if (error instanceof CloudhopError) throw error;
+    const message = (error as Error).message;
     throw new CloudhopError(
       'LOGIN_FAILED',
-      `Could not log in to ${options.startUrl}: ${(error as Error).message}`,
-      options.deviceCode
-        ? undefined
-        : 'Try again with `--device-code` if the browser cannot reach this machine.',
+      `Could not log in to ${options.startUrl}: ${message}`,
+      /invalid start ?url/i.test(message)
+        ? 'Check the start URL. It looks like https://<your-company>.awsapps.com/start; copy it from the AWS access portal.'
+        : options.deviceCode
+          ? undefined
+          : 'Try again with `--device-code` if the browser cannot reach this machine.',
     );
   }
 }

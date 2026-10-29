@@ -35,6 +35,12 @@ function stubApp() {
     setAliasRegion: async (name: string, region: string) => {
       calls.push(`${name}=${region}`);
     },
+    removeAlias: async (name: string) => {
+      calls.push(`rm alias ${name}`);
+    },
+    removeSource: async (id: string) => {
+      calls.push(`rm source ${id}`);
+    },
   };
   return { app: app as unknown as CloudhopApp, calls };
 }
@@ -107,6 +113,12 @@ describe('UI server', () => {
     expect((await patch('us-wst')).status).toBe(400);
     expect((await patch('us-east-2')).status).toBe(200);
     expect(calls).toEqual(['dev=us-east-2']);
+  });
+
+  it('accepts actions without a body, like remove', async () => {
+    expect((await call('/api/aliases/dev', { method: 'DELETE' })).status).toBe(200);
+    expect((await call('/api/sources/acme', { method: 'DELETE' })).status).toBe(200);
+    expect(calls).toEqual(['rm alias dev', 'rm source acme']);
   });
 
   it('requires JSON for writes', async () => {

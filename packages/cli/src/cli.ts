@@ -37,7 +37,7 @@ Setup
   cloudhop login [source]        Log in again and refresh its accounts
   cloudhop sync [source]         Refresh the accounts/roles you have access to
   cloudhop ls [source]           List sources and their aliases
-  cloudhop rm <alias...>         Remove aliases (--source <id> removes a source)
+  cloudhop rm <name...> [--yes]  Remove aliases or sources (a source takes its aliases)
   cloudhop provider [ls|enable|disable] <provider>
   cloudhop doctor                Check (and install) the cloud CLIs
   cloudhop ui [--port <n>] [--no-open]

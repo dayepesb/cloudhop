@@ -6,7 +6,7 @@ import {
   type SessionState,
   type SyncReport,
 } from '@cloudhop/core';
-import { interactive } from '../flags';
+import { interactive, parseArgs } from '../flags';
 import { answer, bold, p, paint } from '../ui';
 import { regionValidator } from './add';
 
@@ -103,25 +103,54 @@ export async function listCommand(app: CloudhopApp, sourceId?: string): Promise<
   }
 }
 
+/**
+ * `cloudhop rm <name...>` removes aliases or whole sources (a source takes its
+ * aliases with it, so it asks first). `--source <id>` forces the source meaning.
+ */
 export async function removeCommand(app: CloudhopApp, args: string[]): Promise<void> {
-  const sourceFlag = args.indexOf('--source');
-  if (sourceFlag !== -1) {
-    const id = args[sourceFlag + 1];
-    if (!id) throw new Error('Usage: cloudhop rm --source <source>');
-    const ok = answer(
-      await p.confirm({
-        message: `Remove source "${id}" and all its aliases?`,
-        initialValue: false,
-      }),
+  const { positional, flags } = parseArgs(args);
+  const config = await app.config();
+  const requests = [
+    ...(flags.source ? [{ name: flags.source, asSource: true }] : []),
+    ...positional.map((name) => ({ name, asSource: false })),
+  ];
+  if (requests.length === 0) {
+    throw new CloudhopError(
+      'ALIAS_NOT_FOUND',
+      'Usage: cloudhop rm <alias-or-source...>',
+      'See what exists with `cloudhop ls`.',
     );
-    if (ok) await app.removeSource(id);
-    return;
   }
-  if (args.length === 0)
-    throw new Error('Usage: cloudhop rm <alias...>  |  cloudhop rm --source <source>');
-  for (const name of args) {
-    await app.removeAlias(name);
-    p.log.success(`Removed ${name}.`);
+
+  for (const { name, asSource } of requests) {
+    if (!asSource && config.aliases.some((a) => a.name === name)) {
+      await app.removeAlias(name);
+      p.log.success(`Removed alias ${name}.`);
+      continue;
+    }
+    const source = config.sources.find((s) => s.id === name);
+    if (!source) {
+      throw new CloudhopError(
+        asSource ? 'SOURCE_NOT_FOUND' : 'ALIAS_NOT_FOUND',
+        `No ${asSource ? 'source' : 'alias or source'} named "${name}".`,
+        'See what exists with `cloudhop ls`.',
+      );
+    }
+    const count = config.aliases.filter((a) => a.source === name).length;
+    const what = `source "${name}"${count ? ` and its ${count} alias(es)` : ''}`;
+    if (!flags.yes) {
+      if (!interactive()) {
+        throw new CloudhopError(
+          'NOT_INTERACTIVE',
+          `Removing ${what} needs confirmation.`,
+          'Add --yes.',
+        );
+      }
+      const ok = answer(await p.confirm({ message: `Remove ${what}?`, initialValue: false }));
+      if (!ok) continue;
+    }
+    await app.removeSource(name);
+    p.log.success(`Removed ${what}.`);
   }
 }
 

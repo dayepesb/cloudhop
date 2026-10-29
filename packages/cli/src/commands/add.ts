@@ -206,8 +206,7 @@ function printTargets(sourceId: string, targets: readonly Target[]): void {
 export async function addCommand(app: CloudhopApp, args: ParsedArgs): Promise<void> {
   if (args.positional.length > 0) {
     const source = sourceFromFlags(app, args);
-    await app.addSource(source);
-    const report = await app.login(source.id);
+    const report = await app.connectSource(source);
     console.log(`Source "${source.id}" added. ${report.targets.length} account/role(s) available:`);
     printTargets(source.id, report.targets);
     return;
@@ -217,9 +216,7 @@ export async function addCommand(app: CloudhopApp, args: ParsedArgs): Promise<vo
   p.intro('cloudhop add');
   const provider = await pickProvider(app);
   const source = await askSource(app, provider);
-  await app.addSource(source);
-
-  const report = await app.login(source.id);
+  const report = await app.connectSource(source);
   p.log.success(`Logged in. Found ${report.targets.length} account/role combination(s).`);
 
   const aliases = await chooseAliases(app, source, report.targets);

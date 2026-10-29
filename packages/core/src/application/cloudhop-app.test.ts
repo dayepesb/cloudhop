@@ -48,8 +48,10 @@ class FakeProvider implements CloudProvider {
     if (this.canRefresh) this.state = 'valid';
     return this.canRefresh;
   }
+  loginError: Error | undefined;
   async login() {
     this.logins++;
+    if (this.loginError) throw this.loginError;
     this.state = 'valid';
   }
   async discoverTargets() {
@@ -111,6 +113,25 @@ describe('CloudhopApp', () => {
     });
     await app.syncSource('acme');
     await app.addAliases([{ name: 'acme-prod', source: 'acme', target: '111/Admin' }]);
+  });
+
+  it('connects a new source by adding it and logging in', async () => {
+    const report = await app.connectSource({
+      id: 'other',
+      provider: 'aws',
+      kind: 'sso',
+      settings: { region: 'us-east-1' },
+    });
+    expect(report.targets.length).toBeGreaterThan(0);
+    expect((await app.config()).sources.map((s) => s.id)).toEqual(['acme', 'other']);
+  });
+
+  it('forgets a new source whose first login fails', async () => {
+    provider.loginError = new Error('No such portal');
+    await expect(
+      app.connectSource({ id: 'typo', provider: 'aws', kind: 'sso', settings: {} }),
+    ).rejects.toThrow('No such portal');
+    expect((await app.config()).sources.map((s) => s.id)).toEqual(['acme']);
   });
 
   it('runs the provider CLI without logging in when the session is valid', async () => {

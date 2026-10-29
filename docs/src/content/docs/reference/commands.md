@@ -15,7 +15,7 @@ description: Every cloudhop command.
 | `cloudhop ls [source]` | Lists each source with its session state and its aliases. Pass a source to see only that one. |
 | `cloudhop region <alias> [region]` | Changes the region an alias runs in (asks when you leave it out). |
 | `cloudhop ui [--port <n>] [--no-open]` | Opens a local web page to add sources, pick aliases, change regions and remove things. |
-| `cloudhop rm <alias...>` | Removes aliases. `--source <id>` removes a source and its aliases. |
+| `cloudhop rm <name...> [--yes]` | Removes aliases, or whole sources with their aliases (asks first; `--yes` skips the question). `--source <id>` when an alias and a source share a name. |
 | `cloudhop provider [ls\|enable\|disable] <id>` | Manages which clouds are enabled. |
 | `cloudhop doctor` | Checks the cloud CLIs and offers to install missing ones. |
 

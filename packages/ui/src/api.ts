@@ -134,7 +134,7 @@ export function createApi(app: CloudhopApp) {
       return { enabled };
     },
 
-    /** Adds a source and logs in right away, like `cloudhop add`. */
+    /** Adds a source and logs in right away, like `cloudhop add`; a failed login adds nothing. */
     'POST /api/sources': async (_, body) => {
       const provider = app.provider(text(body, 'provider') as ProviderId);
       const kind = provider.sourceKinds.find((k) => k.kind === text(body, 'kind'));
@@ -149,8 +149,9 @@ export function createApi(app: CloudhopApp) {
         settings[field.key] = value;
       }
       const id = text(body, 'id');
-      await app.addSource({ id, provider: provider.id, kind: kind.kind, settings });
-      return reportView(await app.login(id));
+      return reportView(
+        await app.connectSource({ id, provider: provider.id, kind: kind.kind, settings }),
+      );
     },
 
     'DELETE /api/sources/:id': async ([id]) => {
