@@ -1,6 +1,6 @@
 {
   "name": "cloudhop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Every cloud account, one short alias away. Sign in to AWS SSO portals and personal accounts once, hop between accounts, roles and regions with one command. No access keys.",
   "keywords": [
     "cli",
@@ -48,7 +48,9 @@
   "devDependencies": {
     "@clack/prompts": "^1.8.1",
     "@cloudhop/adapters-node": "workspace:*",
+    "@cloudhop/assistants": "workspace:*",
     "@cloudhop/core": "workspace:*",
+    "@cloudhop/mcp": "workspace:*",
     "@cloudhop/provider-aws": "workspace:*",
     "@cloudhop/ui": "workspace:*"
   }

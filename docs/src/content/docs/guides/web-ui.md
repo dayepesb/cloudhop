@@ -25,6 +25,10 @@ created in the page work with `hop` straight away, and the other way around.
 - **Change a region.** Edit it in the table and press <kbd>Enter</kbd>.
 - **Sign in again or sync** a source with its buttons.
 - **Remove** an alias (✕) or a whole source (**Remove**, asks first).
+- **Teach your AI assistants.** The *AI assistants* section installs, updates
+  or removes the cloudhop skill and MCP server for each assistant, for you or
+  only for the project you started `cloudhop ui` in. See
+  [AI assistants](/cloudhop/guides/ai-assistants/).
 
 ## Options
 

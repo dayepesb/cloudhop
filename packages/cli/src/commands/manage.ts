@@ -3,6 +3,7 @@ import {
   CloudhopError,
   PROVIDER_IDS,
   type ProviderId,
+  type SessionNext,
   type SessionState,
   type SyncReport,
 } from '@cloudhop/core';
@@ -58,8 +59,34 @@ const SESSION_LABEL: Record<SessionState, string> = {
   unknown: paint('dim', '· session managed by the cloud CLI'),
 };
 
-/** Lists every source with its aliases underneath; `cloudhop ls <source>` shows just one. */
-export async function listCommand(app: CloudhopApp, sourceId?: string): Promise<void> {
+/** Machine-readable output for scripts and AI assistants. Bump `version` on breaking changes. */
+const JSON_VERSION = 1;
+
+const printJson = (value: unknown) =>
+  console.log(JSON.stringify({ version: JSON_VERSION, ...(value as object) }, null, 2));
+
+/**
+ * Lists every source with its aliases underneath; `cloudhop ls <source>` shows
+ * just one, and `--json` prints the same data for scripts and AI assistants.
+ */
+export async function listCommand(app: CloudhopApp, args: string[] = []): Promise<void> {
+  const { positional, flags } = parseArgs(args);
+  const sourceId = positional[0];
+  if (flags.json) {
+    const overview = await app.overview();
+    if (sourceId && !overview.sources.some((s) => s.id === sourceId)) {
+      throw new CloudhopError('SOURCE_NOT_FOUND', `Source "${sourceId}" not found.`);
+    }
+    printJson(
+      sourceId
+        ? {
+            sources: overview.sources.filter((s) => s.id === sourceId),
+            aliases: overview.aliases.filter((a) => a.source === sourceId),
+          }
+        : overview,
+    );
+    return;
+  }
   const config = await app.config();
   if (config.sources.length === 0) {
     console.log('Nothing here yet. Run `cloudhop setup` to get started.');
@@ -214,4 +241,52 @@ export async function regionCommand(app: CloudhopApp, args: string[]): Promise<v
 
   await app.setAliasRegion(name, region);
   console.log(`${name}: ${current.region ?? '(none)'} → ${region}`);
+}
+
+const STATE_SHORT: Record<SessionState, string> = {
+  valid: paint('green', '● session valid'),
+  refreshable: paint('yellow', '◐ session expired, renewable'),
+  expired: paint('red', '○ session expired'),
+  unknown: paint('dim', '· session'),
+};
+
+const NEXT_TEXT: Record<SessionNext, string> = {
+  ready: 'ready to run',
+  'silent-renewal': 'the next command renews the session silently',
+  'browser-sign-in': 'the next command opens the browser to sign in',
+  unknown: 'the cloud CLI manages this session',
+};
+
+/**
+ * `cloudhop status [alias] [--json]`: whether an alias (or every source) can run
+ * right now or needs a sign-in first. Never signs in by itself.
+ */
+export async function statusCommand(app: CloudhopApp, args: string[]): Promise<void> {
+  const { positional, flags } = parseArgs(args);
+  const name = positional[0];
+  if (name) {
+    const status = await app.aliasStatus(name);
+    if (flags.json) return printJson({ alias: status });
+    const account = status.attributes.accountId ? ` (${status.attributes.accountId})` : '';
+    console.log(
+      `${bold(paint('sky', status.name))} → ${status.label ?? status.target}${account}, ${status.region ?? 'no region'}`,
+    );
+    console.log(`  ${STATE_SHORT[status.session]}: ${NEXT_TEXT[status.next]}`);
+    if (status.next === 'browser-sign-in') {
+      console.log(paint('dim', `  Sign in now with \`cloudhop login ${status.source}\`.`));
+    }
+    if (!status.available) console.log(paint('red', '  This account/role is no longer available.'));
+    return;
+  }
+  const overview = await app.overview();
+  if (flags.json) return printJson({ sources: overview.sources });
+  if (overview.sources.length === 0) {
+    console.log('Nothing here yet. Run `cloudhop setup` to get started.');
+    return;
+  }
+  for (const source of overview.sources) {
+    console.log(
+      `${bold(paint('sky', source.id))}  ${STATE_SHORT[source.session]}: ${NEXT_TEXT[source.next]}`,
+    );
+  }
 }

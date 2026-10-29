@@ -16,7 +16,18 @@ describe('cloudhop CLI (bundled)', () => {
     expect((await box.run(['--version'])).stdout.trim()).toBe(version);
     const help = await box.run(['--help']);
     expect(help.code).toBe(0);
-    for (const command of ['setup', 'add', 'alias', 'region', 'rm', 'ui', 'exec']) {
+    for (const command of [
+      'setup',
+      'add',
+      'alias',
+      'region',
+      'status',
+      'rm',
+      'ui',
+      'agent',
+      'mcp',
+      'exec',
+    ]) {
       expect(help.stdout).toContain(`cloudhop ${command}`);
     }
   });
@@ -56,6 +67,20 @@ describe('cloudhop CLI (bundled)', () => {
     expect(badRegion.code).toBe(1);
     expect(badRegion.stderr).toContain('--region');
     expect(await box.readConfig()).not.toContain('acme');
+  });
+
+  it('prints sources and aliases as JSON, and the status of an alias', async () => {
+    box = await sandbox({ seed: true });
+    const ls = JSON.parse((await box.run(['ls', '--json'])).stdout);
+    expect(ls.version).toBe(1);
+    expect(ls.aliases[0]).toMatchObject({
+      name: 'demo-dev',
+      label: 'demo-account / Dev',
+      next: 'ready',
+    });
+    const status = JSON.parse((await box.run(['status', 'demo-dev', '--json'])).stdout);
+    expect(status.alias).toMatchObject({ source: 'demo', region: 'us-east-1', session: 'valid' });
+    expect((await box.run(['status', 'demo-dev'])).stdout).toContain('ready to run');
   });
 
   it('lists sources with their aliases grouped', async () => {

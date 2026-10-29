@@ -58,6 +58,7 @@ copying access keys, editing `~/.aws/config` by hand and running
 | Create more aliases from a portal | `cloudhop alias acme` |
 | Change an alias' region | `cloudhop region acme-prod us-east-2` |
 | Remove an alias or a portal | `cloudhop rm acme-dev` |
+| Check whether an alias needs a sign-in | `cloudhop status acme-prod` |
 | Do all of it from the browser | `cloudhop ui` |
 
 `hop <alias>` is the AWS CLI with the account, role and region already chosen:
@@ -65,6 +66,21 @@ pipes, `--output`, `--query` and exit codes work as with `aws`
 ([more](https://dayepesb.github.io/cloudhop/guides/hop-like-aws/)). Every
 setup command also works with flags, for scripts and dotfiles. See the
 [command reference](https://dayepesb.github.io/cloudhop/reference/commands/).
+
+## Teach your AI assistant
+
+Tired of explaining cloudhop to Claude Code, Kiro, Copilot, Cursor or Codex in
+every chat? Teach it once:
+
+```bash
+cloudhop agent install
+```
+
+It installs a skill (and, optionally, the `cloudhop mcp` server) so the
+assistant asks you which alias to use, runs commands with `hop`, checks the
+session first and confirms before changing anything. Skills refresh
+themselves when you upgrade cloudhop.
+[More](https://dayepesb.github.io/cloudhop/guides/ai-assistants/).
 
 ## The local web UI
 

@@ -177,10 +177,227 @@ function render() {
         ),
         h('button', { class: 'primary', onclick: () => openAddSource() }, '+ Add source'),
       ),
+      assistantsCard(),
     );
+    loadAssistants();
     return;
   }
-  $main.replaceChildren(...state.sources.map(sourceCard));
+  $main.replaceChildren(...state.sources.map(sourceCard), assistantsCard());
+  loadAssistants();
+}
+
+// ---------- AI assistants ----------
+
+let assistantScope = 'user';
+try {
+  assistantScope =
+    localStorage.getItem('cloudhop-assistant-scope') === 'project' ? 'project' : 'user';
+} catch {}
+let assistantsData;
+
+const SKILL_TEXT = {
+  current: ['valid', 'Up to date'],
+  outdated: ['refreshable', 'Outdated'],
+  modified: ['refreshable', 'Edited by you'],
+  missing: ['', 'Not installed'],
+};
+const MCP_TEXT = { registered: 'On', missing: 'Off', unknown: 'Check in the app' };
+
+function assistantsCard() {
+  return h('section', { class: 'card', id: 'assistants', hidden: true });
+}
+
+async function loadAssistants() {
+  try {
+    assistantsData = await api('GET', '/api/assistants');
+    renderAssistants();
+  } catch {
+    document.getElementById('assistants')?.remove();
+  }
+}
+
+function setAssistantScope(scope) {
+  assistantScope = scope;
+  try {
+    localStorage.setItem('cloudhop-assistant-scope', scope);
+  } catch {}
+  renderAssistants();
+}
+
+function assistantAction(label, run, { danger = false, confirmText } = {}) {
+  return h(
+    'button',
+    {
+      class: danger ? 'danger' : undefined,
+      onclick: (e) => {
+        if (confirmText && !confirm(confirmText)) return;
+        busy(e.currentTarget, async () => {
+          try {
+            await run();
+          } catch (error) {
+            fail(error);
+          }
+          await loadAssistants();
+        });
+      },
+    },
+    label,
+  );
+}
+
+function reportInstall(results) {
+  for (const r of results) {
+    if (r.mcp === 'manual') {
+      toast(`${r.name}: skill installed. Add the MCP server by hand.`, { hint: r.mcpManual });
+    } else {
+      toast(`${r.name} now knows cloudhop. Start a new chat so it picks it up.`);
+    }
+  }
+}
+
+function renderAssistants() {
+  const el = document.getElementById('assistants');
+  if (!el || !assistantsData) return;
+  const rows = assistantScope === 'user' ? assistantsData.user : assistantsData.projectScope;
+  const scope = assistantScope;
+  const install = (tools) =>
+    api('POST', '/api/assistants', { tools, scope, mcp: true }).then((r) =>
+      reportInstall(r.results),
+    );
+  const missingDetected = rows
+    .filter((r) => r.detected && r.skill === 'missing')
+    .map((r) => r.assistant);
+
+  const seg = h(
+    'div',
+    { class: 'seg', role: 'group', 'aria-label': 'Where' },
+    h(
+      'button',
+      { 'aria-pressed': String(scope === 'user'), onclick: () => setAssistantScope('user') },
+      'For me',
+    ),
+    h(
+      'button',
+      { 'aria-pressed': String(scope === 'project'), onclick: () => setAssistantScope('project') },
+      'This project',
+    ),
+  );
+
+  const head = h(
+    'div',
+    { class: 'card-head' },
+    h('h2', {}, 'AI assistants'),
+    h(
+      'span',
+      { class: 'meta' },
+      scope === 'user'
+        ? 'Installed in your home folder, for every project'
+        : assistantsData.project,
+    ),
+    h('div', { class: 'spacer' }),
+    h(
+      'div',
+      { class: 'actions' },
+      seg,
+      missingDetected.length > 1
+        ? assistantAction('Install for all detected', () => install(missingDetected))
+        : null,
+    ),
+  );
+
+  const table = h(
+    'table',
+    { class: 'assistants' },
+    h(
+      'thead',
+      {},
+      h(
+        'tr',
+        {},
+        h('th', {}, 'Assistant'),
+        h('th', {}, 'Skill'),
+        h('th', {}, 'MCP server'),
+        h('th'),
+      ),
+    ),
+    h(
+      'tbody',
+      {},
+      rows.map((r) => {
+        const [badgeClass, skillText] = SKILL_TEXT[r.skill];
+        const actions = [];
+        if (r.skill === 'missing')
+          actions.push(assistantAction('Install', () => install([r.assistant])));
+        if (r.skill === 'outdated') {
+          actions.push(
+            assistantAction('Update', () =>
+              api('POST', '/api/assistants/update', {}).then(() =>
+                toast(`${r.name}: skill updated.`),
+              ),
+            ),
+          );
+        }
+        if (r.skill === 'modified') {
+          actions.push(
+            assistantAction(
+              'Replace',
+              () =>
+                api('POST', '/api/assistants/update', { force: true }).then(() =>
+                  toast('Edited skills replaced.'),
+                ),
+              {
+                confirmText: 'Replace your edited copies with the current cloudhop skill?',
+              },
+            ),
+          );
+        }
+        if (r.skill !== 'missing' || r.mcp === 'registered') {
+          actions.push(
+            assistantAction(
+              'Remove',
+              () => api('POST', '/api/assistants/remove', { tools: [r.assistant], scope }),
+              {
+                danger: true,
+                confirmText: `Remove the cloudhop skill and MCP server from ${r.name}?`,
+              },
+            ),
+          );
+        }
+        return h(
+          'tr',
+          {},
+          h(
+            'td',
+            { class: 'alias' },
+            r.name,
+            r.detected ? null : h('small', { class: 'muted-inline' }, ' not detected'),
+          ),
+          h('td', {}, h('span', { class: `badge ${badgeClass}`, title: r.skillPath }, skillText)),
+          h('td', {}, r.skill === 'missing' && r.mcp !== 'registered' ? '' : MCP_TEXT[r.mcp]),
+          h(
+            'td',
+            { style: 'text-align:right' },
+            h('div', { class: 'actions', style: 'justify-content:flex-end' }, actions),
+          ),
+        );
+      }),
+    ),
+  );
+
+  el.replaceChildren(
+    head,
+    h(
+      'div',
+      { class: 'card-body' },
+      h(
+        'p',
+        { class: 'card-help' },
+        'Teach your AI assistant to use cloudhop: it asks you which alias to work with, runs commands with hop, and confirms before changing anything. Includes the cloudhop MCP server.',
+      ),
+      table,
+    ),
+  );
+  el.hidden = false;
 }
 
 function renderChooseClouds() {

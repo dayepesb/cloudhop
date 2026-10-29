@@ -1,6 +1,8 @@
 /// <reference lib="dom" />
 // page.evaluate() callbacks run in the browser.
 import { type ChildProcess, spawn } from 'node:child_process';
+import { mkdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { test as base, expect } from '@playwright/test';
 import { CLI, sandbox } from '../sandbox';
 
@@ -15,8 +17,11 @@ const test = base.extend<{ box: Sandbox; uiUrl: string }>({
     await box.cleanup();
   },
   uiUrl: async ({ box }, use) => {
+    // A throwaway HOME with Kiro "installed", so the AI assistants section never touches real ones.
+    const home = join(box.root, 'home');
+    await mkdir(join(home, '.kiro'), { recursive: true });
     const child: ChildProcess = spawn(process.execPath, [CLI, 'ui', '--no-open', '--port', '0'], {
-      env: box.env(),
+      env: box.env({ HOME: home, USERPROFILE: home, CLOUDHOP_NO_UPDATE_CHECK: '1' }),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     const url = await new Promise<string>((resolve, reject) => {
@@ -110,4 +115,19 @@ test('fits a phone screen without sideways scrolling', async ({ page, uiUrl }) =
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test('teaches an AI assistant from the page', async ({ page, uiUrl, box }) => {
+  await page.goto(uiUrl);
+  const card = page.locator('#assistants');
+  await expect(card.getByRole('heading', { name: 'AI assistants' })).toBeVisible();
+  const kiro = card.getByRole('row', { name: /^Kiro/ });
+  await expect(kiro).toContainText('Not installed');
+  await kiro.getByRole('button', { name: 'Install' }).click();
+  await expect(kiro).toContainText('Up to date');
+  const skill = await readFile(
+    join(box.root, 'home', '.kiro', 'skills', 'cloudhop', 'SKILL.md'),
+    'utf8',
+  );
+  expect(skill).toContain('name: cloudhop');
 });

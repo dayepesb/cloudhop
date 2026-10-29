@@ -27,6 +27,10 @@ crees en la página funcionan con `hop` de inmediato, y viceversa.
 - **Volver a iniciar sesión o sincronizar** una fuente con sus botones.
 - **Eliminar** un alias (✕) o una fuente completa (**Remove**, pregunta
   antes).
+- **Enseñarle cloudhop a tus asistentes de IA.** La sección *AI assistants*
+  instala, actualiza o quita la skill y el servidor MCP de cloudhop en cada
+  asistente, para ti o solo para el proyecto donde iniciaste `cloudhop ui`.
+  Consulta [Asistentes de IA](/cloudhop/es/guides/ai-assistants/).
 
 ## Opciones
 

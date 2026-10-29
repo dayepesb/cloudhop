@@ -1,6 +1,8 @@
+import { ASSISTANTS, type AssistantsInstaller } from '@cloudhop/assistants';
 import type { CloudhopApp, DoctorEntry, ProviderId } from '@cloudhop/core';
 import { answer, p, printBanner, requireInteractive } from '../ui';
 import { addCommand } from './add';
+import { agentCommand } from './agent';
 
 const UPCOMING = ['Azure', 'Google Cloud'];
 
@@ -39,7 +41,10 @@ export async function offerInstall(app: CloudhopApp, entry: DoctorEntry): Promis
   return ok;
 }
 
-export async function setupCommand(app: CloudhopApp): Promise<void> {
+export async function setupCommand(
+  app: CloudhopApp,
+  assistants: AssistantsInstaller,
+): Promise<void> {
   requireInteractive(
     'setup',
     'Run it in a regular terminal, or script it: `cloudhop provider enable aws`, then `cloudhop add aws sso --start-url <url> --region <r>`.',
@@ -71,11 +76,26 @@ export async function setupCommand(app: CloudhopApp): Promise<void> {
   }
 
   const addNow = answer(await p.confirm({ message: 'Add an account or SSO portal now?' }));
-  if (!addNow) {
-    p.outro('All set. Run `cloudhop add` whenever you are ready.');
-    return;
+  if (addNow) await addCommand(app, { positional: [], flags: {} });
+  else p.log.info('Run `cloudhop add` whenever you are ready.');
+
+  // Last, optional: teach the AI assistants found on this machine to use cloudhop.
+  const detected = assistants.detect();
+  if (detected.length > 0) {
+    const names = detected.map((id) => ASSISTANTS[id].name).join(', ');
+    const teach = answer(
+      await p.confirm({
+        message: `Teach your AI assistant (${names}) to use cloudhop?`,
+        initialValue: true,
+      }),
+    );
+    if (teach) {
+      await agentCommand(assistants, ['install']);
+      return;
+    }
+    p.log.info('You can do it later with `cloudhop agent install`.');
   }
-  await addCommand(app, { positional: [], flags: {} });
+  if (!addNow) p.outro('All set.');
 }
 
 export async function doctorCommand(app: CloudhopApp): Promise<void> {

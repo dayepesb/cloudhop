@@ -1,16 +1,32 @@
 import { CloudhopError } from '../domain/errors';
-import type { Alias, Config, ProviderId, ResolvedAlias, Source, Target } from '../domain/model';
+import type {
+  Alias,
+  Config,
+  ProviderId,
+  ResolvedAlias,
+  SessionState,
+  Source,
+  Target,
+} from '../domain/model';
 import { assertValidName } from '../domain/naming';
 import { compareVersions } from '../domain/version';
 import type { CliRequirement, CloudProvider, EnvMode, ProcessEnv } from '../ports/cloud-provider';
 import type { ConfigStore } from '../ports/config-store';
 import type {
   BrowserOpener,
+  CaptureResult,
   InstallRecipe,
   ProcessRunner,
   ToolInfo,
   ToolInstaller,
 } from '../ports/system';
+
+const loginRequired = (sourceId: string) =>
+  new CloudhopError(
+    'LOGIN_REQUIRED',
+    `The session of "${sourceId}" expired and needs a browser sign-in.`,
+    `Run \`cloudhop login ${sourceId}\` (it opens the browser), then try again.`,
+  );
 
 export interface CloudhopDeps {
   config: ConfigStore;
@@ -41,6 +57,46 @@ export interface DoctorEntry {
   tool: ToolInfo;
   outdated: boolean;
   recipe: InstallRecipe | undefined;
+}
+
+/** What the next command will need before it can run. */
+export type SessionNext = 'ready' | 'silent-renewal' | 'browser-sign-in' | 'unknown';
+
+const NEXT_BY_STATE: Record<SessionState, SessionNext> = {
+  valid: 'ready',
+  refreshable: 'silent-renewal',
+  expired: 'browser-sign-in',
+  unknown: 'unknown',
+};
+
+export interface SourceStatus {
+  id: string;
+  provider: ProviderId;
+  kind: string;
+  settings: Record<string, string>;
+  session: SessionState;
+  next: SessionNext;
+}
+
+export interface AliasStatus {
+  name: string;
+  source: string;
+  provider: ProviderId;
+  target: string;
+  /** Human label of the target, e.g. "acme-production / AdministratorAccess". */
+  label: string | undefined;
+  /** False when the target disappeared from the source since the last sync. */
+  available: boolean;
+  region: string | undefined;
+  attributes: Record<string, string>;
+  session: SessionState;
+  next: SessionNext;
+}
+
+/** Everything a person or an AI assistant needs to pick an alias. Never contains secrets. */
+export interface Overview {
+  sources: SourceStatus[];
+  aliases: AliasStatus[];
 }
 
 export interface RunOverrides {
@@ -156,13 +212,22 @@ export class CloudhopApp {
   }
 
   /** Makes sure the source has a usable session, renewing it silently or via login. */
-  async ensureSession(sourceId: string): Promise<SessionAction> {
+  /**
+   * Makes the source's session usable: renews it silently when possible, and
+   * otherwise signs in through the browser, unless `interactive` is false, in
+   * which case it fails with LOGIN_REQUIRED instead of opening a browser.
+   */
+  async ensureSession(
+    sourceId: string,
+    { interactive = true }: { interactive?: boolean } = {},
+  ): Promise<SessionAction> {
     const config = await this.deps.config.load();
     const source = this.findSource(config, sourceId);
     const provider = this.provider(source.provider);
     const state = await provider.sessionState(source);
     if (state === 'valid' || state === 'unknown') return 'none';
     if (state === 'refreshable' && (await provider.refreshSession(source))) return 'refreshed';
+    if (!interactive) throw loginRequired(sourceId);
     await this.login(sourceId);
     return 'logged-in';
   }
@@ -240,6 +305,58 @@ export class CloudhopApp {
     return Promise.all(config.aliases.map((a) => this.resolve(config, a)));
   }
 
+  /** Sources with their session state and every alias, checked without signing in. */
+  async overview(): Promise<Overview> {
+    const config = await this.deps.config.load();
+    const sources = await Promise.all(
+      config.sources.map(async (source): Promise<SourceStatus> => {
+        const session = await this.provider(source.provider).sessionState(source);
+        return {
+          id: source.id,
+          provider: source.provider,
+          kind: source.kind,
+          settings: source.settings,
+          session,
+          next: NEXT_BY_STATE[session],
+        };
+      }),
+    );
+    const bySource = new Map(sources.map((s) => [s.id, s]));
+    const aliases = await Promise.all(
+      config.aliases.map(async (alias): Promise<AliasStatus> => {
+        const resolved = await this.resolve(config, alias);
+        const source = bySource.get(alias.source) as SourceStatus;
+        return {
+          name: alias.name,
+          source: alias.source,
+          provider: resolved.source.provider,
+          target: alias.target,
+          label: resolved.target?.label,
+          available: Boolean(resolved.target),
+          region: resolved.region,
+          attributes: resolved.target?.attributes ?? {},
+          session: source.session,
+          next: source.next,
+        };
+      }),
+    );
+    return { sources, aliases };
+  }
+
+  /** The status of one alias: which account it points to and whether it can run right away. */
+  async aliasStatus(name: string): Promise<AliasStatus> {
+    const { aliases } = await this.overview();
+    const status = aliases.find((a) => a.name === name);
+    if (!status) {
+      throw new CloudhopError(
+        'ALIAS_NOT_FOUND',
+        `Alias "${name}" not found.`,
+        'See your aliases with `cloudhop ls`.',
+      );
+    }
+    return status;
+  }
+
   /** Changes an alias' region; matching the source's region clears the override. */
   async setAliasRegion(name: string, region: string): Promise<void> {
     const config = await this.deps.config.load();
@@ -272,6 +389,33 @@ export class CloudhopApp {
   }
 
   /** Runs any command with the alias' temporary credentials in its environment. */
+  /**
+   * Runs the alias' cloud CLI without a terminal and returns what it printed.
+   * Used where stdin/stdout belong to someone else (the MCP server). It never
+   * opens a browser: an expired session fails with LOGIN_REQUIRED.
+   */
+  async captureAsAlias(
+    name: string,
+    args: readonly string[],
+    overrides: RunOverrides = {},
+  ): Promise<CaptureResult> {
+    const resolved = await this.usableAlias(name, overrides);
+    const provider = this.provider(resolved.source.provider);
+    await this.requireCli(provider);
+    await this.ensureSession(resolved.source.id, { interactive: false });
+    const env = await provider.processEnv(resolved, 'cli');
+    const result = await this.deps.runner.capture(provider.cli.command, args, { env });
+    if (result.exitCode !== 0 && provider.isSessionError(`${result.stdout}\n${result.stderr}`)) {
+      throw loginRequired(resolved.source.id);
+    }
+    return result;
+  }
+
+  /** The command that shows who an alias is, e.g. `aws sts get-caller-identity`. */
+  identityArgs(name: string): Promise<readonly string[]> {
+    return this.resolveAlias(name).then((r) => this.provider(r.source.provider).identityArgs);
+  }
+
   async execAsAlias(
     name: string,
     command: string,

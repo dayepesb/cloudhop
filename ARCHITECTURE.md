@@ -66,6 +66,8 @@ class.
 | `provider-aws` | `CloudProvider` for AWS: SSO (OIDC + portal API over HTTP), `aws login`, `~/.aws/config` and SSO token cache | `core`, Node |
 | `adapters-node` | `ConfigStore` (YAML), `ProcessRunner`, `BrowserOpener`, `ToolInstaller` | `core`, Node, `yaml` |
 | `cli` | Commands, interactive prompts, composition root. **Published to npm as `cloudhop`** | everything |
+| `mcp` | `cloudhop mcp`: a Model Context Protocol server over stdio (hand-written JSON-RPC, no runtime dependencies) exposing read-only tools plus `login` and `run_cloud_cli` | `core`, Node |
+| `assistants` | `cloudhop agent`: installs the cloudhop skill (one `SKILL.md`, bundled) and registers the MCP server in Claude Code, Kiro, Copilot, Cursor and Codex; refreshes installed skills after upgrades | `core`, Node |
 | `ui` | Local web page (`cloudhop ui`): a loopback HTTP server, a JSON API over the same use cases and a framework-free page | `core`, Node |
 
 Internal packages are private (`@cloudhop/*`, never published). `tsup`

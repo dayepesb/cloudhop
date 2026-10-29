@@ -6,9 +6,7 @@ export async function proxyCommand(
   alias: string,
   args: string[],
 ): Promise<number> {
-  const resolved = await app.resolveAlias(alias);
-  const defaultArgs = resolved.source.provider === 'aws' ? ['sts', 'get-caller-identity'] : [];
-  return app.runAsAlias(alias, args.length > 0 ? args : defaultArgs);
+  return app.runAsAlias(alias, args.length > 0 ? args : await app.identityArgs(alias));
 }
 
 /** `cloudhop exec <alias> [--region r] -- <command...>`: any tool with temporary credentials. */

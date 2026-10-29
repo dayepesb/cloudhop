@@ -9,6 +9,7 @@ export type CloudhopErrorCode =
   | 'CLI_MISSING'
   | 'INVALID_NAME'
   | 'NOT_INTERACTIVE'
+  | 'LOGIN_REQUIRED'
   | 'LOGIN_FAILED';
 
 /** An expected failure with a message meant for the user and an optional hint. */

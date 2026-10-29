@@ -67,6 +67,23 @@ The server was paused (often with <kbd>Ctrl</kbd>+<kbd>Z</kbd>). Run `fg` in
 that terminal, or stop it with <kbd>Ctrl</kbd>+<kbd>C</kbd> and run
 `cloudhop ui` again.
 
+## My AI assistant doesn't use cloudhop
+
+- Start a **new chat** (or restart the assistant): skills and MCP servers load
+  when a chat starts.
+- Run `cloudhop agent` to see where the skill is installed. A skill installed
+  *for this project* only works in that project.
+- Ask it directly, for example "use cloudhop to list my aliases", the first
+  time.
+
+## The cloudhop MCP server doesn't start in my editor
+
+Editors opened from the Dock or Start menu sometimes can't find `cloudhop`
+(common with Node version managers). Run `which cloudhop` (`where cloudhop` on
+Windows) and use that full path as the server's command in the assistant's MCP
+settings. Check it with `cloudhop agent`, and in Claude Code with
+`claude mcp list`.
+
 ## Still stuck?
 
 [Open an issue](https://github.com/dayepesb/cloudhop/issues/new/choose) with

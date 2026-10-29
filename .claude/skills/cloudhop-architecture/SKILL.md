@@ -17,7 +17,9 @@ in `ARCHITECTURE.md`; read it once. These are the rules that matter day to day.
 | `packages/provider-aws` | The AWS `CloudProvider`: SSO OIDC + portal over `fetch`, `aws login`, `~/.aws/config` block, token cache | `core`, Node |
 | `packages/adapters-node` | `ConfigStore` (YAML), `ProcessRunner`, `BrowserOpener`, `ToolInstaller` | `core`, Node, `yaml` |
 | `packages/cli` | Commands, prompts (`@clack/prompts`), flags, composition root (`src/container.ts`) | everything |
-| `packages/ui` | `cloudhop ui`: loopback server, JSON API over `CloudhopApp`, framework-free page | `core`, Node |
+| `packages/ui` | `cloudhop ui`: loopback server, JSON API over `CloudhopApp`, framework-free page | `core`, `assistants`, Node |
+| `packages/mcp` | `cloudhop mcp`: stdio MCP server; stdout is protocol only, tools never open a browser by themselves | `core`, Node |
+| `packages/assistants` | `cloudhop agent`: the bundled skill (`src/assets/skill.md`) and where each AI assistant keeps skills and MCP settings | `core`, Node |
 
 - Business rules live in `core`. If a command or the web UI needs new
   behaviour, add a `CloudhopApp` method and call it from both.

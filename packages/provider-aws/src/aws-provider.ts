@@ -60,6 +60,7 @@ export class AwsProvider implements CloudProvider {
   readonly id = 'aws' as const;
   readonly displayName = 'AWS';
   readonly cli = { command: 'aws', displayName: 'AWS CLI v2', minVersion: '2.32.0' };
+  readonly identityArgs = ['sts', 'get-caller-identity'];
   readonly sourceKinds: readonly SourceKind[] = [
     {
       kind: SSO_KIND,

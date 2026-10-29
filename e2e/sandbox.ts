@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** The bundled CLI exactly as npm ships it. Build it first with `pnpm build`. */
@@ -81,6 +81,7 @@ export async function sandbox(options: { seed?: boolean } = {}) {
   });
 
   return {
+    root,
     home,
     aws,
     env,
@@ -108,6 +109,31 @@ export async function sandbox(options: { seed?: boolean } = {}) {
     writeAwsConfig: (content: string) => writeFile(join(aws, 'config'), content),
     cleanup: () => rm(root, { recursive: true, force: true }),
   };
+}
+
+/**
+ * A fake `aws` for tests: prints its version, who it runs as (from the
+ * environment cloudhop set) and the arguments it got. FAKE_AWS_EXPIRED=1
+ * makes it fail like an expired SSO session.
+ */
+const FAKE_AWS = `#!/usr/bin/env node
+const args = process.argv.slice(2);
+if (args[0] === '--version') { console.log('aws-cli/2.40.0 Python/3.12.0 fake'); process.exit(0); }
+if (process.env.FAKE_AWS_EXPIRED === '1') { console.error('Error when retrieving token from sso: Token has expired and refresh failed'); process.exit(255); }
+if (args[0] === 'sts') { console.log(JSON.stringify({ Account: '111111111111', Profile: process.env.AWS_PROFILE, Region: process.env.AWS_REGION })); process.exit(0); }
+console.log(JSON.stringify({ args, profile: process.env.AWS_PROFILE, region: process.env.AWS_REGION }));
+`;
+
+/** Puts the fake `aws` first on a PATH (with a .cmd shim for Windows). */
+export async function fakeAwsPath(dir: string): Promise<string> {
+  const bin = join(dir, 'fake-bin');
+  await mkdir(bin, { recursive: true });
+  const script = join(bin, 'aws-fake.cjs');
+  await writeFile(script, FAKE_AWS);
+  await writeFile(join(bin, 'aws'), `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`);
+  await chmod(join(bin, 'aws'), 0o755);
+  await writeFile(join(bin, 'aws.cmd'), `@"${process.execPath}" "${script}" %*\r\n`);
+  return [bin, process.env.PATH ?? ''].join(delimiter);
 }
 
 /** A PATH with only Node on it, to simulate a machine without the AWS CLI. */

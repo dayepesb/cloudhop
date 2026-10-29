@@ -3,7 +3,7 @@ import { CloudhopError } from '../domain/errors';
 import { type Config, emptyConfig, type SessionState, type Target } from '../domain/model';
 import type { CloudProvider } from '../ports/cloud-provider';
 import type { ConfigStore } from '../ports/config-store';
-import type { ProcessRunner, RunResult } from '../ports/system';
+import type { CaptureResult, ProcessRunner, RunResult } from '../ports/system';
 import { CloudhopApp } from './cloudhop-app';
 
 class MemoryStore implements ConfigStore {
@@ -33,6 +33,7 @@ class FakeProvider implements CloudProvider {
   readonly displayName = 'AWS';
   readonly cli = { command: 'aws', displayName: 'AWS CLI', minVersion: '2.32.0' };
   readonly sourceKinds = [{ kind: 'sso', label: 'SSO', fields: [] }];
+  readonly identityArgs = ['sts', 'get-caller-identity'];
   state: SessionState = 'valid';
   canRefresh = true;
   remoteTargets = [target('111/Admin'), target('222/ReadOnly')];
@@ -76,8 +77,10 @@ class FakeRunner implements ProcessRunner {
     this.calls.push({ command, args });
     return this.results.shift() ?? { exitCode: 0, stderrTail: '' };
   }
-  async capture() {
-    return { exitCode: 0, stdout: '', stderr: '' };
+  captured: CaptureResult[] = [];
+  async capture(command: string, args: readonly string[]) {
+    this.calls.push({ command, args });
+    return this.captured.shift() ?? { exitCode: 0, stdout: '', stderr: '' };
   }
   async probe() {
     return this.installed ? { installed: true, version: '2.36.9' } : { installed: false };
@@ -215,6 +218,45 @@ describe('CloudhopApp', () => {
     await expect(app.setAliasRegion('nope', 'us-east-1')).rejects.toMatchObject({
       code: 'ALIAS_NOT_FOUND',
     });
+  });
+
+  it('reports sources and aliases with their session state', async () => {
+    provider.state = 'expired';
+    const overview = await app.overview();
+    expect(overview.sources).toEqual([
+      expect.objectContaining({ id: 'acme', session: 'expired', next: 'browser-sign-in' }),
+    ]);
+    expect(overview.aliases[0]).toMatchObject({
+      name: 'acme-prod',
+      source: 'acme',
+      target: '111/Admin',
+      available: true,
+      region: 'us-east-1',
+      next: 'browser-sign-in',
+    });
+    expect(provider.logins).toBe(0);
+    await expect(app.aliasStatus('nope')).rejects.toMatchObject({ code: 'ALIAS_NOT_FOUND' });
+  });
+
+  it('captures a command without ever opening the browser', async () => {
+    runner.captured = [{ exitCode: 0, stdout: '{"Account":"111"}', stderr: '' }];
+    const result = await app.captureAsAlias('acme-prod', ['sts', 'get-caller-identity']);
+    expect(result.stdout).toContain('111');
+
+    provider.state = 'expired';
+    await expect(app.captureAsAlias('acme-prod', ['s3', 'ls'])).rejects.toMatchObject({
+      code: 'LOGIN_REQUIRED',
+    });
+    expect(provider.logins).toBe(0);
+    expect(opened).toEqual([]);
+  });
+
+  it('reports LOGIN_REQUIRED when the CLI says the session expired', async () => {
+    runner.captured = [{ exitCode: 255, stdout: '', stderr: 'ExpiredToken: renew it' }];
+    await expect(app.captureAsAlias('acme-prod', ['s3', 'ls'])).rejects.toMatchObject({
+      code: 'LOGIN_REQUIRED',
+    });
+    expect(provider.logins).toBe(0);
   });
 
   it('applies a region override', async () => {

@@ -10,6 +10,9 @@ in the format the AWS CLI already uses. It never writes `~/.aws/credentials`.
 | --- | --- | --- | --- |
 | `~/.config/cloudhop/config.yaml` | cloudhop | Enabled clouds, sources and aliases | No |
 | `~/.config/cloudhop/targets.json` | cloudhop | Cache of the accounts and roles of each source | No |
+| `~/.config/cloudhop/assistants.json` | `cloudhop agent` | Which assistant skills cloudhop installed, to keep them up to date | No |
+| `~/.config/cloudhop/update-check.json` | cloudhop | When npm was last checked and the latest version | No |
+| Assistant skills and MCP settings | `cloudhop agent install` | See [AI assistants](/cloudhop/guides/ai-assistants/) for every path | No |
 | `~/.aws/config` | cloudhop, only inside its block | One `sso-session` per portal, one profile per alias | No |
 | `~/.aws/sso/cache/<hash>.json` | cloudhop, like `aws sso login` | The SSO session: access and refresh tokens, expiry | Short-lived tokens, not access keys |
 | `~/.aws/credentials` | never | Nothing from cloudhop | |

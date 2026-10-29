@@ -57,6 +57,8 @@ export class NodeProcessRunner implements ProcessRunner {
   ): Promise<CaptureResult> {
     return new Promise((resolve) => {
       const child = spawn(command, args, { env: buildEnv(options.env), shell: useShell });
+      // Nobody types into a captured command: close stdin so it never waits for input.
+      child.stdin.end();
       let stdout = '';
       let stderr = '';
       child.stdout.on('data', (c: Buffer) => {

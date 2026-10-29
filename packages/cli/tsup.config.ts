@@ -22,7 +22,7 @@ export default defineConfig({
     {
       name: 'ui-assets-as-text',
       setup(build) {
-        build.onLoad({ filter: /[\\/]ui[\\/]src[\\/]assets[\\/]/ }, async (args) => ({
+        build.onLoad({ filter: /[\\/](ui|assistants)[\\/]src[\\/]assets[\\/]/ }, async (args) => ({
           contents: await readFile(args.path, 'utf8'),
           loader: 'text',
         }));

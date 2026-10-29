@@ -3,10 +3,13 @@ import { CloudhopError } from './errors';
 /** Words the CLI uses as commands, so they can't be alias names. */
 export const RESERVED_NAMES = new Set([
   'add',
+  'agent',
   'alias',
   'login',
+  'mcp',
   'region',
   'setup',
+  'status',
   'sync',
   'ls',
   'list',

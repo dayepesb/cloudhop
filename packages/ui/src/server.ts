@@ -1,6 +1,7 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import type { AssistantsInstaller } from '@cloudhop/assistants';
 import type { CloudhopApp } from '@cloudhop/core';
 import { createApi } from './api';
 import script from './assets/app.js';
@@ -8,6 +9,8 @@ import page from './assets/index.html';
 
 export interface UiServerOptions {
   app: CloudhopApp;
+  /** Enables the "AI assistants" section. */
+  assistants?: AssistantsInstaller;
   /** 0 picks a free port. */
   port?: number;
 }
@@ -58,9 +61,13 @@ const sameSecret = (given: string | undefined, expected: string) =>
  * the API needs a random per-run token sent in a custom header, and requests
  * with a foreign Host (DNS rebinding) or Origin are rejected.
  */
-export async function startUiServer({ app, port = 0 }: UiServerOptions): Promise<UiServer> {
+export async function startUiServer({
+  app,
+  assistants,
+  port = 0,
+}: UiServerOptions): Promise<UiServer> {
   const token = randomBytes(24).toString('base64url');
-  const handle = createApi(app);
+  const handle = createApi(app, assistants);
   let allowedHosts = new Set<string>();
 
   const server = createServer(async (req, res) => {

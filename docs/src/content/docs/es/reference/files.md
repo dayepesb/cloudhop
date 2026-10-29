@@ -11,6 +11,9 @@ estándar de AWS en el formato que el AWS CLI ya usa. Nunca escribe
 | --- | --- | --- | --- |
 | `~/.config/cloudhop/config.yaml` | cloudhop | Nubes activadas, fuentes y alias | No |
 | `~/.config/cloudhop/targets.json` | cloudhop | Caché de las cuentas y roles de cada fuente | No |
+| `~/.config/cloudhop/assistants.json` | `cloudhop agent` | Qué skills de asistentes instaló cloudhop, para mantenerlas al día | No |
+| `~/.config/cloudhop/update-check.json` | cloudhop | Cuándo se revisó npm por última vez y la última versión | No |
+| Skills y configuración MCP de los asistentes | `cloudhop agent install` | Todas las rutas en [Asistentes de IA](/cloudhop/es/guides/ai-assistants/) | No |
 | `~/.aws/config` | cloudhop, solo dentro de su bloque | Un `sso-session` por portal, un perfil por alias | No |
 | `~/.aws/sso/cache/<hash>.json` | cloudhop, como `aws sso login` | La sesión SSO: access token y refresh token, vencimiento | Tokens de corta duración, no access keys |
 | `~/.aws/credentials` | nunca | Nada de cloudhop | |

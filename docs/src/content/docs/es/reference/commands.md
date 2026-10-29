@@ -50,7 +50,8 @@ comando. Consulta
 | `cloudhop region <alias> [region]` | Cambia la región de un alias (pregunta si no la indicas). |
 | `cloudhop rm <name...> [--yes]` | Elimina alias, o fuentes con sus alias. Eliminar una fuente pregunta antes; `--yes` omite la pregunta. |
 | `cloudhop rm --source <id>` | Elimina una fuente cuando un alias tiene el mismo nombre. |
-| `cloudhop ls [source]` | Lista las fuentes con el estado de su sesión y sus alias. |
+| `cloudhop ls [source] [--json]` | Lista las fuentes con el estado de su sesión y sus alias. `--json` imprime los mismos datos para scripts y asistentes de IA. |
+| `cloudhop status [alias] [--json]` | Si un alias (o cada fuente) puede ejecutarse ya, se renueva en silencio o necesita iniciar sesión en el navegador. Nunca inicia sesión por sí solo. |
 
 ## Sesiones
 
@@ -58,6 +59,16 @@ comando. Consulta
 | --- | --- |
 | `cloudhop login [source]` | Vuelve a iniciar sesión ahora y actualiza las cuentas y roles de la fuente. |
 | `cloudhop sync [source]` | Actualiza las cuentas y roles de una fuente o de todas. |
+
+## Asistentes de IA
+
+| Comando | Qué hace |
+| --- | --- |
+| `cloudhop agent [status]` | Qué asistentes tienen la skill y el servidor MCP de cloudhop, para ti y en este proyecto. |
+| `cloudhop agent install [--tools <lista>] [--scope user\|project] [--no-mcp]` | Enséñale cloudhop a Claude Code, Kiro, Copilot, Cursor o Codex. Consulta [Asistentes de IA](/cloudhop/es/guides/ai-assistants/). |
+| `cloudhop agent update [--force]` | Refresca ahora las skills instaladas (`--force` también reemplaza las copias que editaste). |
+| `cloudhop agent remove [--tools <lista>] [--scope user\|project]` | Quita la skill y la entrada del servidor MCP. |
+| `cloudhop mcp` | El servidor Model Context Protocol (stdio) que los asistentes inician por ti. |
 
 ## Nubes y herramientas
 
@@ -83,3 +94,4 @@ comando. Consulta
 | `CLOUDHOP_AWS_DIR` | La carpeta de AWS que se usa en lugar de `~/.aws`. Útil para pruebas. |
 | `CLOUDHOP_DEVICE_CODE=1` | Siempre inicia sesión con un código de dispositivo. |
 | `CLOUDHOP_DEBUG=1` | Imprime los detalles completos de los errores. |
+| `CLOUDHOP_NO_UPDATE_CHECK=1` | No revisa en npm si hay una versión nueva (también está apagado en CI y sin terminal). |

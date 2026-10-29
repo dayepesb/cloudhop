@@ -42,6 +42,24 @@ a la persona que está frente al teclado:
 - La página recibe lo que muestra `cloudhop ls`, nunca tokens ni
   credenciales.
 
+## Asistentes de IA
+
+- **La skill es texto que puedes leer**, se instala solo donde tú eliges y
+  viaja dentro del paquete de cloudhop. Nada descarga instrucciones al
+  momento de usarla, así que cambiar lo que se le dice a tu asistente exige
+  una versión revisada y firmada.
+- **El servidor MCP** (`cloudhop mcp`) corre en tu computador, solo habla con
+  el asistente que lo inició y nunca devuelve tokens ni credenciales.
+- Sus herramientas **nunca abren tu navegador por su cuenta**: una sesión
+  vencida se reporta, y el asistente tiene que preguntarte antes de llamar a
+  `login`.
+- `run_cloud_cli` está marcada como capaz de cambiar recursos, así que los
+  asistentes te piden permiso; rechaza `--profile`.
+- cloudhop solo edita su propia entrada en la configuración de cada
+  asistente y no reescribe archivos que no puede leer.
+- La revisión diaria de versión solo lee el último número de versión en npm.
+  Se apaga con `CLOUDHOP_NO_UPDATE_CHECK=1`.
+
 ## Cómo se publican las versiones
 
 - Cada cambio pasa por CodeQL, una auditoría de dependencias y un escaneo de

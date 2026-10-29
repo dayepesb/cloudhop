@@ -36,6 +36,23 @@ person at the keyboard:
 - A strict Content-Security-Policy allows only the page's own script.
 - The page receives what `cloudhop ls` shows, never tokens or credentials.
 
+## AI assistants
+
+- **The skill is text you can read**, installed only where you choose, and it
+  ships inside the cloudhop package. Nothing downloads instructions at run
+  time, so changing what your assistant is told requires a reviewed, signed
+  release.
+- **The MCP server** (`cloudhop mcp`) runs on your computer, talks only to the
+  assistant that started it, and never returns tokens or credentials.
+- Its tools **never open your browser on their own**: an expired session is
+  reported, and the assistant has to ask you before calling `login`.
+- `run_cloud_cli` is marked as able to change resources, so assistants ask
+  for your permission; it refuses `--profile`.
+- cloudhop only edits its own entry in each assistant's settings and refuses
+  to rewrite files it can't parse.
+- The daily update check reads only the latest version number from npm. Turn
+  it off with `CLOUDHOP_NO_UPDATE_CHECK=1`.
+
 ## How releases are made
 
 - Every change is checked by CodeQL, a dependency audit and a secret scan,

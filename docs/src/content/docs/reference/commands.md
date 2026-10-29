@@ -49,7 +49,8 @@ Runs any command with the alias' temporary credentials in its environment
 | `cloudhop region <alias> [region]` | Change the region of an alias (asks when you leave it out). |
 | `cloudhop rm <name...> [--yes]` | Remove aliases, or sources with their aliases. Removing a source asks first; `--yes` skips it. |
 | `cloudhop rm --source <id>` | Remove a source when an alias has the same name. |
-| `cloudhop ls [source]` | List sources with their session state and aliases. |
+| `cloudhop ls [source] [--json]` | List sources with their session state and aliases. `--json` prints the same data for scripts and AI assistants. |
+| `cloudhop status [alias] [--json]` | Whether an alias (or every source) can run now, renews silently, or needs a browser sign-in. Never signs in by itself. |
 
 ## Sessions
 
@@ -57,6 +58,16 @@ Runs any command with the alias' temporary credentials in its environment
 | --- | --- |
 | `cloudhop login [source]` | Sign in again now and refresh the source's accounts and roles. |
 | `cloudhop sync [source]` | Refresh the accounts and roles of one or every source. |
+
+## AI assistants
+
+| Command | What it does |
+| --- | --- |
+| `cloudhop agent [status]` | Which assistants have the cloudhop skill and MCP server, for you and for this project. |
+| `cloudhop agent install [--tools <list>] [--scope user\|project] [--no-mcp]` | Teach Claude Code, Kiro, Copilot, Cursor or Codex to use cloudhop. See [AI assistants](/cloudhop/guides/ai-assistants/). |
+| `cloudhop agent update [--force]` | Refresh installed skills now (`--force` also replaces copies you edited). |
+| `cloudhop agent remove [--tools <list>] [--scope user\|project]` | Remove the skill and the MCP server entry. |
+| `cloudhop mcp` | The Model Context Protocol server (stdio) that assistants start for you. |
 
 ## Clouds and tools
 
@@ -82,3 +93,4 @@ Runs any command with the alias' temporary credentials in its environment
 | `CLOUDHOP_AWS_DIR` | The AWS folder to use instead of `~/.aws`. Handy for testing. |
 | `CLOUDHOP_DEVICE_CODE=1` | Always sign in with a device code. |
 | `CLOUDHOP_DEBUG=1` | Print full error details. |
+| `CLOUDHOP_NO_UPDATE_CHECK=1` | Don't check npm for a newer version (also off in CI and without a terminal). |

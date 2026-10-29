@@ -1,4 +1,10 @@
 import {
+  ASSISTANT_IDS,
+  type AssistantId,
+  type AssistantsInstaller,
+  type Scope,
+} from '@cloudhop/assistants';
+import {
   type Alias,
   type CloudhopApp,
   CloudhopError,
@@ -50,7 +56,24 @@ const reportView = (report: SyncReport) => ({
  * The page's JSON API: a thin translation from HTTP to CloudhopApp use cases.
  * It never returns tokens or credentials, only what `cloudhop ls` would show.
  */
-export function createApi(app: CloudhopApp) {
+const SCOPES = new Set<Scope>(['user', 'project']);
+const scopeOf = (value: unknown): Scope => {
+  if (SCOPES.has(value as Scope)) return value as Scope;
+  throw badRequest('Scope must be "user" or "project".');
+};
+const assistantIds = (value: unknown): AssistantId[] => {
+  const ids = Array.isArray(value) ? value : [];
+  if (ids.length === 0 || !ids.every((id) => ASSISTANT_IDS.includes(id as AssistantId))) {
+    throw badRequest('Choose at least one assistant.');
+  }
+  return ids as AssistantId[];
+};
+
+export function createApi(app: CloudhopApp, assistants?: AssistantsInstaller) {
+  const requireAssistants = (): AssistantsInstaller => {
+    if (!assistants) throw badRequest('AI assistant setup is not available here.');
+    return assistants;
+  };
   const regionCheck = (source: Source, region: string): void => {
     const validate = app
       .provider(source.provider)
@@ -114,6 +137,31 @@ export function createApi(app: CloudhopApp) {
         })),
       };
     },
+
+    /** Which AI assistants know cloudhop, for both scopes. Paths are shown, never file contents. */
+    'GET /api/assistants': async () => {
+      const installer = requireAssistants();
+      return {
+        project: process.cwd(),
+        user: await installer.status('user'),
+        projectScope: await installer.status('project'),
+      };
+    },
+
+    'POST /api/assistants': async (_, body) => {
+      const tools = assistantIds(body.tools);
+      const scope = scopeOf(body.scope);
+      return {
+        results: await requireAssistants().install(tools, scope, { mcp: body.mcp !== false }),
+      };
+    },
+
+    'POST /api/assistants/remove': async (_, body) => ({
+      results: await requireAssistants().remove(assistantIds(body.tools), scopeOf(body.scope)),
+    }),
+
+    'POST /api/assistants/update': async (_, body) =>
+      requireAssistants().update({ force: body.force === true }),
 
     'GET /api/doctor': async () =>
       (await app.doctor()).map((entry) => ({

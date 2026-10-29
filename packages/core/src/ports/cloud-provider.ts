@@ -46,6 +46,8 @@ export interface CloudProvider {
   readonly displayName: string;
   readonly cli: CliRequirement;
   readonly sourceKinds: readonly SourceKind[];
+  /** CLI arguments that print who you are, used by `hop <alias>` with no arguments. */
+  readonly identityArgs: readonly string[];
 
   sessionState(source: Source): Promise<SessionState>;
   /** Renews the session without user interaction. Returns false when that isn't possible. */

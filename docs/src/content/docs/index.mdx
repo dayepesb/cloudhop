@@ -109,6 +109,19 @@ hop acme-prod s3 ls            # runs `aws s3 ls` as that account, role and regi
 That's it. Next week, when the session has expired, `hop acme-prod s3 ls`
 signs you in again by itself and then runs your command.
 
+## Your AI assistant knows it too
+
+Claude Code, Kiro, GitHub Copilot, Cursor and Codex can run cloud commands for
+you. Teach them cloudhop once:
+
+```bash
+cloudhop agent install
+```
+
+From then on your assistant asks which alias to use, checks the session, runs
+commands with `hop` and confirms before changing anything, in every new chat.
+See [AI assistants](guides/ai-assistants/).
+
 ## Why cloudhop
 
 <CardGrid stagger>
