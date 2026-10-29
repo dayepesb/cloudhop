@@ -4,7 +4,7 @@ export interface ParsedArgs {
   flags: Record<string, string>;
 }
 
-const BOOLEAN_FLAGS = new Set(['yes', 'all', 'list']);
+const BOOLEAN_FLAGS = new Set(['yes', 'all', 'list', 'noOpen']);
 
 /** "start-url" → "startUrl", so flags line up with provider field keys. */
 const camel = (name: string) => name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { defineConfig } from 'tsup';
 
 const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
@@ -16,4 +17,16 @@ export default defineConfig({
     js: "#!/usr/bin/env node\nimport { createRequire as __cloudhopRequire } from 'node:module';\nconst require = __cloudhopRequire(import.meta.url);",
   },
   define: { __CLOUDHOP_VERSION__: JSON.stringify(version) },
+  // The web UI's page and browser script ship inside the bundle as plain strings.
+  esbuildPlugins: [
+    {
+      name: 'ui-assets-as-text',
+      setup(build) {
+        build.onLoad({ filter: /[\\/]ui[\\/]src[\\/]assets[\\/]/ }, async (args) => ({
+          contents: await readFile(args.path, 'utf8'),
+          loader: 'text',
+        }));
+      },
+    },
+  ],
 });

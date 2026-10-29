@@ -10,6 +10,7 @@ import {
 } from './commands/manage';
 import { execCommand, proxyCommand } from './commands/run';
 import { doctorCommand, setupCommand } from './commands/setup';
+import { uiCommand } from './commands/ui';
 import { createApp } from './container';
 import { parseArgs } from './flags';
 import { PromptCancelled } from './ui';
@@ -39,6 +40,8 @@ Setup
   cloudhop rm <alias...>         Remove aliases (--source <id> removes a source)
   cloudhop provider [ls|enable|disable] <provider>
   cloudhop doctor                Check (and install) the cloud CLIs
+  cloudhop ui [--port <n>] [--no-open]
+                                 Manage sources and aliases in a local web page
 
 Options
   --device-code                  Log in with a code instead of the browser redirect
@@ -108,7 +111,7 @@ async function main(argv: string[]): Promise<number> {
     case 'exec':
       return execCommand(app, local);
     case 'ui':
-      console.log('The local web UI is coming soon.');
+      await uiCommand(app, parseArgs(local));
       return 0;
     default:
       return proxyCommand(app, command, args);

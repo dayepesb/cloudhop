@@ -11,6 +11,7 @@ cloudhop setup             # pick your clouds, add an SSO portal or personal acc
 hop acme-prod s3 ls          # runs `aws s3 ls` with the right account, role and region
 hop acme-prod                # who am I?
 cloudhop exec acme-prod -- terraform plan
+cloudhop ui                # or manage everything from a local web page
 ```
 
 ## Why

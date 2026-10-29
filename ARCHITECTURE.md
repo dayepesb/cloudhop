@@ -25,7 +25,7 @@ shape the project are recorded as ADRs at the end.
              PRIMARY ADAPTERS (how users get in)
         ┌──────────────┐          ┌──────────────┐
         │  packages/   │          │  packages/   │
-        │     cli      │          │   ui (later) │
+        │     cli      │          │      ui      │
         └──────┬───────┘          └──────┬───────┘
                ▼                         ▼
    ┌───────────────────────────────────────────────┐
@@ -66,7 +66,7 @@ class.
 | `provider-aws` | `CloudProvider` for AWS: SSO (OIDC + portal API over HTTP), `aws login`, `~/.aws/config` and SSO token cache | `core`, Node |
 | `adapters-node` | `ConfigStore` (YAML), `ProcessRunner`, `BrowserOpener`, `ToolInstaller` | `core`, Node, `yaml` |
 | `cli` | Commands, interactive prompts, composition root. **Published to npm as `cloudhop`** | everything |
-| `ui` (planned) | Local web page (`cloudhop ui`) calling the same use cases | `core`, adapters |
+| `ui` | Local web page (`cloudhop ui`): a loopback HTTP server, a JSON API over the same use cases and a framework-free page | `core`, Node |
 
 Internal packages are private (`@cloudhop/*`, never published). `tsup`
 bundles them into the single `cloudhop` package, so users install one thing.
@@ -130,7 +130,24 @@ only after the user confirms.
 3. Register it in `packages/cli/src/container.ts`.
 4. Add install recipes for its CLI in `adapters-node`.
 
-The core, the CLI commands and (later) the web UI need no changes.
+The core, the CLI commands and the web UI need no changes: the UI builds its
+forms from the provider's source kinds.
+
+## Web UI security
+
+`cloudhop ui` exposes the same actions as the CLI, so it is locked to the
+person at the keyboard:
+
+- It listens on `127.0.0.1` only, on a random port unless `--port` is given.
+- Every API call needs a random per-run token. The token travels in the URL
+  fragment (never sent to the server in the request line or a Referer) and
+  then in a custom header, which other sites cannot set without a CORS
+  preflight that the server never approves.
+- Requests whose `Host` or `Origin` is not the loopback address are rejected,
+  which blocks DNS rebinding.
+- A strict Content-Security-Policy allows only the page's own script.
+- The API returns what `cloudhop ls` shows; tokens and credentials never
+  leave the token cache.
 
 ## Testing
 

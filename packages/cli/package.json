@@ -44,6 +44,7 @@
     "@clack/prompts": "^1.8.1",
     "@cloudhop/adapters-node": "workspace:*",
     "@cloudhop/core": "workspace:*",
-    "@cloudhop/provider-aws": "workspace:*"
+    "@cloudhop/provider-aws": "workspace:*",
+    "@cloudhop/ui": "workspace:*"
   }
 }

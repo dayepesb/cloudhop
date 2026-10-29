@@ -14,6 +14,7 @@ description: Every cloudhop command.
 | `cloudhop sync [source]` | Refreshes the accounts/roles you have access to. |
 | `cloudhop ls [source]` | Lists each source with its session state and its aliases. Pass a source to see only that one. |
 | `cloudhop region <alias> [region]` | Changes the region an alias runs in (asks when you leave it out). |
+| `cloudhop ui [--port <n>] [--no-open]` | Opens a local web page to add sources, pick aliases, change regions and remove things. |
 | `cloudhop rm <alias...>` | Removes aliases. `--source <id>` removes a source and its aliases. |
 | `cloudhop provider [ls\|enable\|disable] <id>` | Manages which clouds are enabled. |
 | `cloudhop doctor` | Checks the cloud CLIs and offers to install missing ones. |

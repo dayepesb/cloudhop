@@ -26,7 +26,11 @@ export default defineConfig({
         {
           label: 'Guides',
           translations: { es: 'Guías' },
-          items: [{ slug: 'guides/aws-sso' }, { slug: 'guides/personal-accounts' }],
+          items: [
+            { slug: 'guides/aws-sso' },
+            { slug: 'guides/personal-accounts' },
+            { slug: 'guides/web-ui' },
+          ],
         },
         {
           label: 'Reference',

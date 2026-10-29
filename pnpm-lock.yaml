@@ -59,10 +59,19 @@ importers:
       '@cloudhop/provider-aws':
         specifier: workspace:*
         version: link:../provider-aws
+      '@cloudhop/ui':
+        specifier: workspace:*
+        version: link:../ui
 
   packages/core: {}
 
   packages/provider-aws:
+    dependencies:
+      '@cloudhop/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/ui:
     dependencies:
       '@cloudhop/core':
         specifier: workspace:*
