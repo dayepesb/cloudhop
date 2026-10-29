@@ -210,7 +210,8 @@ jobs:
           VERSION: ${{ needs.package.outputs.version }}
         run: |
           npm --version
-          npm publish pkg/cloudhop-*.tgz --access public
+          # "./" matters: without it npm reads pkg/name.tgz as a GitHub owner/repo.
+          npm publish ./pkg/cloudhop-*.tgz --access public
           echo "Published cloudhop@$VERSION." >> "$GITHUB_STEP_SUMMARY"
 
   deploy-docs:
