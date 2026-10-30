@@ -102,6 +102,37 @@ export function createTools(app: CloudhopApp): McpTool[] {
       },
     },
     {
+      name: 'open_console',
+      title: 'Open the cloud console',
+      description:
+        "Opens the cloud's web console in the user's browser as the alias, already signed in, optionally on one service (AWS: s3, ec2, lambda, cloudwatch...). Returns how the user got in, never the sign-in URL. Use it when the user wants to see something in the console. Never opens a browser to sign in: an expired session returns LOGIN_REQUIRED.",
+      inputSchema: {
+        type: 'object',
+        properties: {
+          ...aliasInput,
+          service: { type: 'string', description: 'Optional service page, e.g. "s3" or "ec2".' },
+        },
+        required: ['alias'],
+        additionalProperties: false,
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+      run: async (args) => {
+        const alias = text(args, 'alias');
+        const service =
+          typeof args.service === 'string' && args.service.trim() ? args.service.trim() : undefined;
+        const via = await app.openConsole(alias, {
+          ...(service ? { service } : {}),
+          interactive: false,
+        });
+        return { alias, opened: true, via };
+      },
+    },
+    {
       name: 'login',
       title: 'Sign in to a source',
       description:

@@ -44,6 +44,7 @@ describe('cloudhop mcp', () => {
       'alias_status',
       'list_aliases',
       'login',
+      'open_console',
       'run_cloud_cli',
       'whoami',
     ]);

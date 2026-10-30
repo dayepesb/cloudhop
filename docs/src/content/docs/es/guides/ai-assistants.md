@@ -62,6 +62,7 @@ equipo recibe las mismas instrucciones al abrir el proyecto.
 | `list_aliases` | Fuentes y alias con el estado de su sesión | No |
 | `alias_status` | A qué cuenta apunta un alias y si puede ejecutarse ya | No |
 | `whoami` | Le pregunta a la nube quién es realmente el alias | No |
+| `open_console` | Abre la consola de AWS en tu navegador como el alias, con la sesión ya iniciada | No |
 | `login` | Abre tu navegador para iniciar sesión y espera hasta 5 minutos | Inicia tu sesión |
 | `run_cloud_cli` | Ejecuta el CLI de la nube como el alias (igual que `hop`) y devuelve su salida | **Puede**, por eso tu asistente te pregunta antes |
 

@@ -46,8 +46,14 @@ Don't start several cloud commands in parallel while a sign-in is pending.
 - **The same command in several aliases** (after the user chose them):
   `cloudhop each a,b,c --yes -- <aws arguments>`; add `--json` to parse the
   results.
-- **The AWS web console**: `cloudhop console <alias> [service]` opens it in
-  the user's browser, already signed in. Never try to print or fetch its URL.
+- **The AWS web console**: `cloudhop console <alias> [service]` (or the
+  `open_console` tool) opens it in the user's browser, already signed in.
+  Never try to print or fetch its URL.
+- **Always name the alias.** Never run the interactive forms meant for a
+  person at a terminal: `hop` or `hop -` without an alias, `cloudhop console`
+  without an alias, `cloudhop use` (it only changes an interactive shell),
+  `cloudhop setup`, or `cloudhop add`/`alias` without flags. Nobody can answer
+  their prompts in your terminal.
 - **Other tools** (Terraform, CDK, SDK scripts):
   `cloudhop exec <alias> -- <command>`, e.g.
   `cloudhop exec acme-dev -- terraform plan`.
@@ -72,8 +78,9 @@ Don't start several cloud commands in parallel while a sign-in is pending.
   environment (with MCP: `confirm_production: true`). Never set it on your own.
 - Treat aliases or accounts that merely look like production (`prd`, `live`)
   the same way, even if they are not marked.
-- Don't change cloudhop itself (`cloudhop add`, `rm`, `region`, `login` for
-  another source) unless the user asked for it.
+- Don't change cloudhop itself (`cloudhop add`, `rm`, `mv`, `region`, `prod`,
+  `team import`, `agent`, `login` for another source) unless the user asked
+  for it. Never unmark a production alias to get around a confirmation.
 
 ## 5. When something goes wrong
 

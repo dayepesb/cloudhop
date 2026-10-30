@@ -1,6 +1,6 @@
 {
   "name": "cloudhop",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Every cloud account, one short alias away. Sign in to AWS SSO portals and personal accounts once, hop between accounts, roles and regions with one command. No access keys.",
   "keywords": [
     "cli",

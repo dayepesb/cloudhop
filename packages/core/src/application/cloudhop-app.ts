@@ -464,7 +464,11 @@ export class CloudhopApp {
    */
   async consoleUrl(
     name: string,
-    { service, region }: { service?: string; region?: string } = {},
+    {
+      service,
+      region,
+      interactive = true,
+    }: { service?: string; region?: string; interactive?: boolean } = {},
   ): Promise<ConsoleSignIn> {
     const resolved = await this.usableAlias(name, region ? { region } : {});
     const provider = this.provider(resolved.source.provider);
@@ -481,7 +485,7 @@ export class CloudhopApp {
         'Examples: s3, ec2, lambda, cloudwatch.',
       );
     }
-    await this.ensureSession(resolved.source.id);
+    await this.ensureSession(resolved.source.id, { interactive });
     return provider.consoleUrl(resolved, service);
   }
 
@@ -491,7 +495,7 @@ export class CloudhopApp {
    */
   async openConsole(
     name: string,
-    options: { service?: string; region?: string } = {},
+    options: { service?: string; region?: string; interactive?: boolean } = {},
   ): Promise<ConsoleSignIn['via']> {
     const { url, via } = await this.consoleUrl(name, options);
     await this.deps.browser.open(url);

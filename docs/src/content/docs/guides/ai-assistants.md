@@ -60,6 +60,7 @@ your team who opens the project gets the same instructions.
 | `list_aliases` | Sources and aliases with their session state | No |
 | `alias_status` | Which account an alias points to, and whether it can run now | No |
 | `whoami` | Asks the cloud who the alias really is | No |
+| `open_console` | Opens the AWS console in your browser as the alias, already signed in | No |
 | `login` | Opens your browser to sign in and waits up to 5 minutes | Signs you in |
 | `run_cloud_cli` | Runs the cloud CLI as the alias (like `hop`) and returns its output | **Can**, so your assistant asks you first |
 
