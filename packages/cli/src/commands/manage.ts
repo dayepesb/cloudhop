@@ -130,7 +130,7 @@ export async function listCommand(
     );
     for (const { alias, target, region } of own) {
       const label = target ? target.label : paint('red', `${alias.target} (no longer available)`);
-      const tag = alias.prod ? `  ${paint('red', 'PROD')}` : '';
+      const tag = `${alias.prod ? `  ${paint('red', 'PROD')}` : ''}${alias.default ? `  ${paint('dim', 'default')}` : ''}`;
       console.log(
         `  ${alias.name.padEnd(nameWidth)}${(region ?? '-').padEnd(regionWidth)}${label}${tag}`,
       );
@@ -286,7 +286,10 @@ export async function statusCommand(app: CloudhopApp, args: string[]): Promise<v
   }
   const overview = await app.overview();
   const inUse = activeAliases();
-  if (flags.json) return printJson({ inUse, sources: overview.sources });
+  const defaults = Object.fromEntries(
+    overview.aliases.filter((a) => a.default).map((a) => [a.provider, a.name]),
+  );
+  if (flags.json) return printJson({ inUse, defaults, sources: overview.sources });
   // Where am I? Works in any terminal, with or without a prompt label.
   const using = Object.entries(inUse).map(([cloud, alias]) => {
     const status = overview.aliases.find((a) => a.name === alias);
@@ -298,6 +301,8 @@ export async function statusCommand(app: CloudhopApp, args: string[]): Promise<v
       ? `This terminal uses ${using.join(', ')}.`
       : paint('dim', 'This terminal uses no alias (`cloudhop use <alias>` to pick one).'),
   );
+  const starts = Object.entries(defaults).map(([cloud, alias]) => `${cloud} ${alias}`);
+  if (starts.length) console.log(paint('dim', `New terminals start with ${starts.join(', ')}.`));
   if (overview.sources.length === 0) {
     console.log('Nothing here yet. Run `cloudhop setup` to get started.');
     return;

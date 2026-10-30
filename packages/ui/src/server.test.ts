@@ -31,7 +31,19 @@ function stubApp() {
     ],
     availableProviders: () => [provider],
     provider: () => provider,
-    resolveAlias: async () => ({ source, region: 'us-east-1' }),
+    resolveAlias: async () => ({
+      alias: { name: 'dev', source: 'acme', target: '1/Dev', default: true },
+      source,
+      region: 'us-east-1',
+    }),
+    setDefaultAlias: async (name: string) => {
+      calls.push(`default ${name}`);
+      return 'aws';
+    },
+    clearDefaultAlias: async (provider: string) => {
+      calls.push(`no default ${provider}`);
+      return ['dev'];
+    },
     setAliasRegion: async (name: string, region: string) => {
       calls.push(`${name}=${region}`);
     },
@@ -113,6 +125,18 @@ describe('UI server', () => {
     expect((await patch('us-wst')).status).toBe(400);
     expect((await patch('us-east-2')).status).toBe(200);
     expect(calls).toEqual(['dev=us-east-2']);
+  });
+
+  it('makes an alias the default of new terminals, and back', async () => {
+    const patch = (value: boolean) =>
+      call('/api/aliases/dev', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ default: value }),
+      });
+    expect((await patch(true)).status).toBe(200);
+    expect((await patch(false)).status).toBe(200);
+    expect(calls).toEqual(['default dev', 'no default aws']);
   });
 
   it('accepts actions without a body, like remove', async () => {

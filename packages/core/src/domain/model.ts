@@ -27,6 +27,8 @@ export interface Alias {
   region?: string;
   /** Production: shown in red and protected against accidental changes. */
   prod?: boolean;
+  /** The alias new terminals start with (`cloudhop use --default`): one per cloud at most. */
+  default?: boolean;
 }
 
 export interface Config {

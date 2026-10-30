@@ -45,6 +45,7 @@ aliases:
     source: acme
     target: 210987654321/Developer
     region: us-east-2      # only when it differs from the source's region
+    default: true          # new terminals start with it (`cloudhop use --default`)
 ```
 
 Move the folder with `CLOUDHOP_HOME`, or with `XDG_CONFIG_HOME` if you use it.

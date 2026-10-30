@@ -279,6 +279,17 @@ describe('CloudhopApp', () => {
     expect((await app.config()).aliases[0]?.prod).toBeUndefined();
   });
 
+  it('keeps one default alias per cloud', async () => {
+    await app.addAliases([{ name: 'acme-dev', source: 'acme', target: '111/Admin' }]);
+    expect(await app.setDefaultAlias('acme-prod')).toBe('aws');
+    await app.setDefaultAlias('acme-dev');
+    expect(await app.defaultAliases()).toEqual({ aws: 'acme-dev' });
+    expect((await app.aliasStatus('acme-prod')).default).toBe(false);
+    expect(await app.clearDefaultAlias('aws')).toEqual(['acme-dev']);
+    expect(await app.defaultAliases()).toEqual({});
+    expect(await app.clearDefaultAlias()).toEqual([]);
+  });
+
   it('asks for confirmation only for changes on production aliases', async () => {
     expect(await app.needsProductionConfirmation('acme-prod', ['s3', 'rm'])).toBe(false);
     await app.setProduction(['acme-prod'], true);

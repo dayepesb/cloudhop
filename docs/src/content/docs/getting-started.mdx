@@ -125,7 +125,9 @@ cloudhop use --off             # back to no account
 
 `cloudhop use` is the switch between accounts: it sets the alias' account,
 role and region in **this terminal only**. Other terminals keep theirs, so
-you can have `acme-dev` in one tab and `acme-prod` in another.
+you can have `acme-dev` in one tab and `acme-prod` in another. A new
+terminal starts with no alias; to start every new one with the account you
+use most, run `cloudhop use acme-dev --default`.
 
 ### When a session expires
 

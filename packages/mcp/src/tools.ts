@@ -59,7 +59,7 @@ export function createTools(app: CloudhopApp, context?: () => Promise<object>): 
       name: 'list_aliases',
       title: 'List cloudhop aliases',
       description:
-        'Lists every cloudhop source (SSO portal or personal account) with its session state, and every alias: name, account/role label, region and whether a sign-in is needed. Also hints: `folder` (the aliases this project pins in its .cloudhoprc, and whether the user trusted it) and `inUse` (aliases the user switched their terminal to). Call this first, then ask the user which alias to work with, offering the hinted one first. Never contains secrets.',
+        'Lists every cloudhop source (SSO portal or personal account) with its session state, and every alias: name, account/role label, region and whether a sign-in is needed. Also hints: `folder` (the aliases this project pins in its .cloudhoprc, and whether the user trusted it) and `inUse` (aliases the user switched their terminal to); `default: true` marks the alias new terminals of the user start with. Call this first, then ask the user which alias to work with, offering the hinted one first. Never contains secrets.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, openWorldHint: false },
       run: async () => ({ ...(await app.overview()), ...(await context?.()) }),

@@ -50,6 +50,7 @@ Usage
   cloudhop use [alias] [--save]  Use an alias in this terminal: then plain aws, terraform... run as it
                                  (--save: remember it for this folder in .cloudhoprc)
   cloudhop use --off [cloud]     Stop using the alias of every cloud, or just one (aws)
+  cloudhop use <alias> --default Also start every new terminal with it (--no-default: stop)
   cloudhop allow | deny [folder] Trust (or stop trusting) a folder's .cloudhoprc
   cloudhop shell                 Set up your terminal once: cloudhop use, .cloudhoprc on cd, completion
   cloudhop shell starship        Prompt segments for Starship (alias in use, PROD in red)
@@ -143,7 +144,12 @@ async function main(argv: string[]): Promise<number> {
   }
   if (command === 'shell') {
     const clis = app.availableProviders().map((p) => ({ command: p.cli.command, provider: p.id }));
-    await shellCommand(local, clis);
+    // A new terminal starts with the default alias, if there is one.
+    const start = await app.defaultAliases().then(
+      (d) => Object.keys(d).length > 0,
+      () => false,
+    );
+    await shellCommand(local, clis, start);
     return 0;
   }
   // What the shell integration evals (on `cd` too): fast, and nothing else on stdout.

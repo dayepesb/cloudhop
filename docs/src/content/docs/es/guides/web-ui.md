@@ -40,6 +40,8 @@ Cada página tiene su propia dirección (`#/aliases`, `#/sources`,
   **Console**.
 - **Marcar producción** con la casilla **Prod**, y **cambiar el nombre** con
   ✎.
+- **Empezar cada terminal nueva con un alias** con la casilla **Default**
+  (uno por nube). Las terminales ya abiertas conservan el que usan.
 - **Volver a iniciar sesión o sincronizar** una fuente con sus botones.
 - **Eliminar** un alias (✕) o una fuente completa (**Remove**, pregunta
   antes).

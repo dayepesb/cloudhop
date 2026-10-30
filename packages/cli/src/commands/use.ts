@@ -71,7 +71,11 @@ export async function shellContext(trusted: TrustedFolders, cwd = process.cwd())
 
 const tilde = (path: string) => path.replace(homedir(), '~');
 
-/** Clouds that the folder file of the current folder switched on, so leaving it switches them off. */
+/**
+ * Clouds that cloudhop switched on by itself, from the folder's file or the
+ * default alias: another folder or leaving this one may switch them again.
+ * Clouds the user picked with `cloudhop use` stay until they pick again.
+ */
 const folderProviders = (): ProviderId[] =>
   (process.env.CLOUDHOP_RC_PROVIDERS ?? '')
     .split(',')
@@ -125,11 +129,13 @@ function warnProduction(activation: Activation): void {
 }
 
 /**
- * `cloudhop use <alias> [--save] | --off [cloud]`: makes the current shell use
- * an alias, so `aws`, Terraform and SDKs work without `hop`. With the shell
- * integration it changes this same shell (it evals what `--emit <shell>`
- * prints); without it, it opens a new shell that uses the alias.
- * `--from <file>` and `--leave` are what the integration runs on `cd`.
+ * `cloudhop use <alias> [--save] [--default] | --off [cloud] | --no-default [cloud]`:
+ * makes the current shell use an alias, so `aws`, Terraform and SDKs work
+ * without `hop`. With the shell integration it changes this same shell (it
+ * evals what `--emit <shell>` prints); without it, it opens a new shell that
+ * uses the alias. `--default` also makes new terminals start with it.
+ * `--from <file>` and `--leave` are what the integration runs on `cd` and
+ * when a terminal opens.
  */
 export async function useCommand(
   app: CloudhopApp,
@@ -146,18 +152,23 @@ export async function useCommand(
     return 0;
   }
 
+  if (flags.noDefault) {
+    const which = positional[0];
+    const cleared = await app.clearDefaultAlias(which ? cloudArg(which) : undefined);
+    if (shell) process.stdout.write('\n');
+    notify(
+      cleared.length
+        ? `New terminals no longer start with ${cleared.join(', ')}. This one keeps what it uses.`
+        : 'There was no default alias.',
+    );
+    return 0;
+  }
+
   if (flags.off) {
     if (!shell) throw noIntegration('Nothing to turn off: this shell has no cloudhop integration.');
     const which = positional[0];
-    if (which && !PROVIDER_IDS.includes(which as ProviderId)) {
-      throw new CloudhopError(
-        'INVALID_NAME',
-        `Unknown cloud "${which}".`,
-        `Use one of: ${PROVIDER_IDS.join(', ')}, or nothing to turn them all off.`,
-      );
-    }
     const providers = which
-      ? [which as ProviderId]
+      ? [cloudArg(which)]
       : app.availableProviders().map((provider) => provider.id);
     const env: ProcessEnv = {};
     for (const provider of providers) Object.assign(env, deactivate(app, provider));
@@ -174,6 +185,16 @@ export async function useCommand(
   const alias = positional[0] ?? (await pickAlias(app, 'Use which alias in this shell?'));
   const activation = await activate(app, alias, true);
 
+  if (flags.default) {
+    if (activation.prod && !flags.yes) {
+      throw new CloudhopError(
+        'PROD_CONFIRMATION_REQUIRED',
+        `${alias} is production: every new terminal would start in it.`,
+        `If that's what you want, run \`cloudhop use ${alias} --default --yes\`.`,
+      );
+    }
+    await app.setDefaultAlias(alias);
+  }
   let folder: string | undefined;
   if (flags.save) folder = await saveFolderFile(trusted, activation.provider, alias);
 
@@ -195,15 +216,26 @@ export async function useCommand(
     );
   process.stdout.write(`${shellExports(shell, env)}\n`);
   notify(`This shell now uses ${activation.summary}.`);
+  if (flags.default) notify(`New terminals start with ${alias}.`);
   if (folder) notify(`Saved in ${tilde(folder)}: this folder switches to ${alias} on cd.`);
   warnProduction(activation);
   return 0;
 }
 
+/** The file of the folder (if any) and the clouds cloudhop switched on by itself. */
 const folderMarks = (file: string | undefined, providers: readonly ProviderId[]): ProcessEnv => ({
   CLOUDHOP_RC: providers.length && file ? file : undefined,
-  CLOUDHOP_RC_PROVIDERS: providers.length && file ? providers.join(',') : undefined,
+  CLOUDHOP_RC_PROVIDERS: providers.length ? providers.join(',') : undefined,
 });
+
+function cloudArg(which: string): ProviderId {
+  if (PROVIDER_IDS.includes(which as ProviderId)) return which as ProviderId;
+  throw new CloudhopError(
+    'INVALID_NAME',
+    `Unknown cloud "${which}".`,
+    `Use one of: ${PROVIDER_IDS.join(', ')}, or nothing for all of them.`,
+  );
+}
 
 const noIntegration = (message: string) =>
   new CloudhopError(
@@ -213,9 +245,11 @@ const noIntegration = (message: string) =>
   );
 
 /**
- * What the shell integration evals on `cd`: the aliases of a trusted folder
- * file (`file`), minus those of the folder it left. It never signs in or
- * prompts, and a problem is a one-line note: it must never break `cd`.
+ * What the shell integration evals on `cd` and when a terminal opens: the
+ * aliases of a trusted folder file (`file`), the default alias for the other
+ * clouds, minus those of the folder it left. A cloud the user picked with
+ * `cloudhop use` keeps its alias unless the folder names one. It never signs
+ * in or prompts, and a problem is a one-line note: it must never break `cd`.
  */
 async function folderEnv(
   app: CloudhopApp,
@@ -250,21 +284,48 @@ async function folderEnv(
     }
   }
 
-  const applied = activations.map((a) => a.provider);
+  const fromFolder = activations.map((a) => a.provider);
+  const defaults: Activation[] = [];
+  for (const [provider, alias] of Object.entries(await defaultAliases(app))) {
+    if (fromFolder.includes(provider as ProviderId)) continue;
+    const picked = process.env[activeVars(provider as ProviderId).alias];
+    if (picked && !previous.includes(provider as ProviderId)) continue;
+    try {
+      defaults.push(await activate(app, alias as string, false));
+    } catch (error) {
+      notify(`Default alias: ${(error as Error).message}`);
+    }
+  }
+
+  const applied = [...fromFolder, ...defaults.map((a) => a.provider)];
   const env: ProcessEnv = {};
   const left = previous.filter((p) => !applied.includes(p));
   for (const provider of left) Object.assign(env, deactivate(app, provider));
-  for (const activation of activations) Object.assign(env, activation.env);
+  for (const activation of [...activations, ...defaults]) Object.assign(env, activation.env);
   Object.assign(env, folderMarks(path, applied));
 
+  // A new terminal on its default says nothing: the prompt shows it.
+  const back = defaults.filter((a) => previous.includes(a.provider));
   if (activations.length) {
     notify(`Using ${activations.map((a) => a.summary).join(' and ')}, from ${FOLDER_FILE}.`);
-    for (const activation of activations) warnProduction(activation);
-  } else if (left.length) {
-    const names = left.map((p) => process.env[activeVars(p).alias]).filter(Boolean);
-    notify(`Left the folder of ${names.join(', ')}: no alias in this shell.`);
+  } else if (back.length) {
+    notify(`Back to your default ${back.map((a) => a.summary).join(' and ')}.`);
   }
+  const gone = left.map((p) => process.env[activeVars(p).alias]).filter(Boolean);
+  if (!activations.length && !back.length && gone.length) {
+    notify(`Left the folder of ${gone.join(', ')}: no alias in this shell.`);
+  }
+  for (const activation of [...activations, ...defaults]) warnProduction(activation);
   return env;
+}
+
+/** A broken config must not break `cd` either. */
+async function defaultAliases(app: CloudhopApp): Promise<Partial<Record<ProviderId, string>>> {
+  try {
+    return await app.defaultAliases();
+  } catch {
+    return {};
+  }
 }
 
 async function saveFolderFile(

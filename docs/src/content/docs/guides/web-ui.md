@@ -37,6 +37,8 @@ Pages have their own address (`#/aliases`, `#/sources`, `#/assistants`,
 - **Change a region.** Edit it in the table and press <kbd>Enter</kbd>.
 - **Open the AWS console** as an alias, already signed in, with **Console**.
 - **Mark production** with the **Prod** checkbox, and **rename** with ✎.
+- **Start every new terminal with an alias** with the **Default** checkbox
+  (one per cloud). Terminals already open keep what they use.
 - **Sign in again or sync** a source with its buttons.
 - **Remove** an alias (✕) or a whole source (**Remove**, asks first).
 - **Teach your AI assistants.** The *AI assistants* section installs, updates

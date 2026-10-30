@@ -97,6 +97,8 @@ export interface AliasStatus {
   attributes: Record<string, string>;
   /** Marked as production: protected against accidental changes. */
   prod: boolean;
+  /** The alias new terminals of its cloud start with. */
+  default: boolean;
   session: SessionState;
   next: SessionNext;
 }
@@ -354,6 +356,7 @@ export class CloudhopApp {
           region: resolved.region,
           attributes: resolved.target?.attributes ?? {},
           prod: alias.prod === true,
+          default: alias.default === true,
           session: source.session,
           next: source.next,
         };
@@ -400,6 +403,43 @@ export class CloudhopApp {
       else delete alias.prod;
     }
     await this.deps.config.save(config);
+  }
+
+  /**
+   * Makes an alias the one new terminals of its cloud start with, replacing
+   * that cloud's previous default. Returns the cloud.
+   */
+  async setDefaultAlias(name: string): Promise<ProviderId> {
+    const config = await this.deps.config.load();
+    const alias = this.findAlias(config, name);
+    const provider = this.findSource(config, alias.source).provider;
+    for (const other of config.aliases) {
+      if (this.findSource(config, other.source).provider === provider) delete other.default;
+    }
+    alias.default = true;
+    await this.deps.config.save(config);
+    return provider;
+  }
+
+  /** Clears the default alias of a cloud, or of every cloud. Returns the aliases it cleared. */
+  async clearDefaultAlias(provider?: ProviderId): Promise<string[]> {
+    const config = await this.deps.config.load();
+    const cleared = config.aliases.filter(
+      (a) => a.default && (!provider || this.findSource(config, a.source).provider === provider),
+    );
+    for (const alias of cleared) delete alias.default;
+    if (cleared.length) await this.deps.config.save(config);
+    return cleared.map((a) => a.name);
+  }
+
+  /** The alias new terminals start with, per cloud. */
+  async defaultAliases(): Promise<Partial<Record<ProviderId, string>>> {
+    const config = await this.deps.config.load();
+    return Object.fromEntries(
+      config.aliases
+        .filter((a) => a.default)
+        .map((a) => [this.findSource(config, a.source).provider, a.name]),
+    );
   }
 
   /** Changes an alias' region; matching the source's region clears the override. */

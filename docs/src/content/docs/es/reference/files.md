@@ -46,6 +46,7 @@ aliases:
     source: acme
     target: 210987654321/Developer
     region: us-east-2      # solo cuando es distinta de la región de la fuente
+    default: true          # las terminales nuevas arrancan con él (`cloudhop use --default`)
 ```
 
 Cambia la ubicación de la carpeta con `CLOUDHOP_HOME`, o con

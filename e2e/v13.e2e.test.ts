@@ -41,6 +41,39 @@ describe('cloudhop use, one alias per cloud', () => {
   });
 });
 
+describe('the default alias', () => {
+  it('is what a new terminal starts with, and production needs --yes', async () => {
+    const { run } = await withAws();
+    const set = await run(['use', 'demo-dev', '--default', '--emit', 'bash']);
+    expect(set.code).toBe(0);
+    expect(set.stderr).toContain('New terminals start with demo-dev');
+    expect(JSON.parse((await run(['status', '--json'])).stdout).defaults).toEqual({
+      aws: 'demo-dev',
+    });
+    expect((await run(['shell', 'zsh'])).stdout).toContain('_cloudhop_start=1');
+
+    // A new terminal: no alias yet, nothing picked by hand.
+    const start = await run(['use', '--emit', 'bash', '--leave']);
+    expect(start.stdout).toContain("export AWS_PROFILE='demo-dev'");
+    expect(start.stdout).toContain("export CLOUDHOP_RC_PROVIDERS='aws'");
+    expect(start.stdout).toContain('unset CLOUDHOP_RC');
+    // An alias picked by hand in this terminal stays.
+    const picked = await run(['use', '--emit', 'bash', '--leave'], {
+      CLOUDHOP_AWS_ALIAS: 'other',
+    });
+    expect(picked.stdout).not.toContain('AWS_PROFILE');
+
+    await run(['prod', 'demo-dev']);
+    const prod = await run(['use', 'demo-dev', '--default', '--emit', 'bash']);
+    expect(prod.code).not.toBe(0);
+    expect(prod.stderr).toContain('--default --yes');
+
+    const clear = await run(['use', '--no-default', '--emit', 'bash']);
+    expect(clear.stderr).toContain('no longer start with demo-dev');
+    expect((await run(['shell', 'zsh'])).stdout).not.toContain('_cloudhop_start=1');
+  });
+});
+
 describe('cloudhop status', () => {
   it('says which alias this terminal uses, in any terminal', async () => {
     const { run } = await withAws();
@@ -166,6 +199,48 @@ cd "${box.root}"; echo "left=[$CLOUDHOP_AWS_ALIAS] profile=[$AWS_PROFILE]"
     expect(result.stdout).toContain('prod-change-exit=1');
     expect(result.stderr).toContain('production');
     expect(result.stdout).toContain('left=[] profile=[]');
+  });
+});
+
+describe.each(shells)('%s with a default alias', (shell) => {
+  it('starts on it, gives way to a folder and comes back when leaving', async () => {
+    const { path, project, run } = await withAws();
+    const bin = join(box.root, 'cloudhop-bin');
+    await mkdir(bin, { recursive: true });
+    await writeFile(join(bin, 'cloudhop'), `#!/bin/sh\nexec "${process.execPath}" "${CLI}" "$@"\n`);
+    await chmod(join(bin, 'cloudhop'), 0o755);
+    await writeFile(join(project, '.cloudhoprc'), 'aws: demo-dev\n');
+    expect((await run(['allow', project])).code).toBe(0);
+    expect((await run(['use', 'demo-dev', '--default', '--emit', shell])).code).toBe(0);
+    const cd = shell === 'bash' ? 'cd() { builtin cd "$@" && _cloudhop_cd; }' : '';
+    const script = `
+eval "$(cloudhop shell ${shell})"
+${cd}
+echo "start=[$CLOUDHOP_AWS_ALIAS] profile=[$AWS_PROFILE]"
+cd "${project}/src"; echo "folder=[$CLOUDHOP_AWS_ALIAS] rc=[$CLOUDHOP_RC]"
+cd "${box.root}"; echo "back=[$CLOUDHOP_AWS_ALIAS] rc=[$CLOUDHOP_RC]"
+cloudhop use --off; echo "off=[$CLOUDHOP_AWS_ALIAS]"
+`;
+    const result = spawnSync(
+      shell,
+      shell === 'zsh' ? ['-f', '-c', script] : ['--norc', '-c', script],
+      {
+        cwd: box.root,
+        env: {
+          ...box.env(),
+          PATH: [bin, path].join(delimiter),
+          CLOUDHOP_NO_UPDATE_CHECK: '1',
+          AWS_PROFILE: '',
+          CLOUDHOP_AWS_ALIAS: '',
+        },
+        encoding: 'utf8',
+      },
+    );
+    expect(result.stdout).toContain('start=[demo-dev] profile=[demo-dev]');
+    expect(result.stdout).toContain(`folder=[demo-dev] rc=[${project}/.cloudhoprc]`);
+    expect(result.stdout).toContain('back=[demo-dev] rc=[]');
+    expect(result.stderr).toContain('Back to your default demo-dev');
+    expect(result.stdout).toContain('off=[]');
   });
 });
 

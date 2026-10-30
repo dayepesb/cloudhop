@@ -946,6 +946,36 @@ function aliasRow(alias) {
       }),
       'Prod',
     ),
+    h(
+      'label',
+      {
+        class: 'prod-toggle',
+        title: 'New terminals start with this alias (only one per cloud)',
+      },
+      h('input', {
+        type: 'checkbox',
+        checked: alias.default,
+        'aria-label': `New terminals start with ${alias.name}`,
+        onchange: (e) => {
+          const on = e.currentTarget.checked;
+          if (
+            on &&
+            alias.prod &&
+            !confirm(`${alias.name} is production. Start every new terminal in it?`)
+          ) {
+            e.currentTarget.checked = false;
+            return;
+          }
+          patch(
+            { default: on },
+            on
+              ? `New terminals start with ${alias.name}. Open a new one to see it.`
+              : `New terminals no longer start with ${alias.name}.`,
+          );
+        },
+      }),
+      'Default',
+    ),
     iconButton('✎', `Rename ${alias.name}`, () => {
       const to = prompt(`New name for "${alias.name}"`, alias.name)?.trim();
       if (to && to !== alias.name) patch({ name: to }, `${alias.name} is now ${to}.`);
@@ -972,6 +1002,13 @@ function aliasRow(alias) {
       { class: 'alias', title: `hop ${alias.name} <command>` },
       alias.name,
       alias.prod ? h('span', { class: 'prod-tag' }, 'PROD') : null,
+      alias.default
+        ? h(
+            'span',
+            { class: 'default-tag', title: 'New terminals start with this alias' },
+            'DEFAULT',
+          )
+        : null,
     ),
     h('td', { class: 'muted' }, alias.source),
     h('td', {}, h('div', { class: 'region' }, input, save)),

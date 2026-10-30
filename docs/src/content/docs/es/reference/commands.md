@@ -85,6 +85,8 @@ comando. Consulta
 | `cloudhop use [alias]` | Cambia esta terminal a un alias: después `aws`, Terraform y los SDKs normales corren como él. Sin la integración con la shell abre una shell nueva. Consulta [Usa un alias en tu terminal](/cloudhop/es/guides/shell/). |
 | `cloudhop use <alias> --save` | Lo mismo, y lo fija a esta carpeta en un `.cloudhoprc` (confiable para ti). |
 | `cloudhop use --off [nube]` | Deja de usar el alias de todas las nubes, o de una (`aws`). |
+| `cloudhop use <alias> --default` | Lo mismo, y cada terminal nueva arranca con él. Un alias de producción también necesita `--yes`. |
+| `cloudhop use --no-default [nube]` | Las terminales nuevas vuelven a arrancar sin alias (de todas las nubes, o de una). |
 | `cloudhop allow [carpeta]` / `cloudhop deny [carpeta]` | Confía (o deja de confiar) en el `.cloudhoprc` de una carpeta, para que `cd` cambie a sus alias. |
 | `cloudhop shell` | Configura tu terminal una vez: agrega una línea al archivo de inicio de tu shell y, si usas Starship, el segmento del alias a `starship.toml` (igual que `cloudhop shell install`). |
 | `cloudhop shell zsh\|bash\|fish\|pwsh` | Imprime el script de la integración; esa línea lo ejecuta. |

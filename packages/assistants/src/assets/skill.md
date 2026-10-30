@@ -29,7 +29,12 @@ path; these are commands for **them** to run in their own terminal:
    `cloudhop use --off` goes back. Expired sessions sign in by themselves,
    and on production aliases `aws` asks before changes. Their prompt shows
    the alias in use, in red for production, and `cloudhop status` tells
-   them which alias their terminal uses.
+   them which alias their terminal uses. `cloudhop use` is per terminal: a
+   new terminal starts with no alias unless they choose a default with
+   `cloudhop use <alias> --default` (or the **Default** box in
+   `cloudhop ui`); `cloudhop use --no-default` stops it. A production
+   default needs `--yes`. A `cloudhop use` typed in a terminal wins over
+   the folder's `.cloudhoprc`, which wins over the default.
 3. **Per project**: `cloudhop use <alias> --save` writes a `.cloudhoprc` in
    the folder, so `cd` into it switches the terminal; teammates run
    `cloudhop allow` once after cloning (and again after the file changes);
@@ -56,6 +61,7 @@ When their terminal doesn't do what they expect:
 | No label in the prompt | Run `cloudhop shell` again (it adds what's missing), then a new terminal |
 | `cd` into the project doesn't switch | `cloudhop allow` in that folder; check the alias name exists (`cloudhop ls`) |
 | `aws` runs in the wrong account | `cloudhop status`, then `cloudhop use <alias>` or `cloudhop use --off` |
+| A new terminal forgot the `cloudhop use` | It's per terminal by design: `cloudhop use <alias> --default` makes every new terminal start with it |
 
 That is the user's way. **You** work differently, below: you always name the
 alias with `hop <alias>`, because your shell doesn't have their integration.
@@ -72,7 +78,8 @@ Before the first cloud operation in a conversation:
    - The listing may carry hints: `folder.aliases` is what this project pins
      in its `.cloudhoprc` (`folder.trusted` says whether the user approved
      it), and `inUse` is what the user switched their terminal to with
-     `cloudhop use` (`cloudhop status --json` has `inUse` too). Offer that
+     `cloudhop use` (`cloudhop status --json` has `inUse` too); an alias
+     with `default: true` is the one their new terminals start with. Offer that
      alias first ("This project uses
      `license-qa`, use it?"), but still wait for the answer.
 3. Use that alias for the rest of the conversation. Ask again if the user
@@ -141,7 +148,8 @@ Don't start several cloud commands in parallel while a sign-in is pending.
   the same way, even if they are not marked.
 - Don't change cloudhop itself (`cloudhop add`, `rm`, `mv`, `region`, `prod`,
   `team import`, `agent`, `login` for another source) or write a
-  `.cloudhoprc` unless the user asked for it. Never unmark a production
+  `.cloudhoprc` or change their default alias (`use --default`,
+  `--no-default`) unless the user asked for it. Never unmark a production
   alias to get around a confirmation.
 
 ## 5. When something goes wrong

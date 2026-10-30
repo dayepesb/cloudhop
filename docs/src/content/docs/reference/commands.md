@@ -83,6 +83,8 @@ Runs any command with the alias' temporary credentials in its environment
 | `cloudhop use [alias]` | Switch this terminal to an alias: then plain `aws`, Terraform and SDKs run as it. Without the shell integration it opens a new shell instead. See [Use an alias in your terminal](/cloudhop/guides/shell/). |
 | `cloudhop use <alias> --save` | Same, and pin it to this folder in a `.cloudhoprc` (trusted for you). |
 | `cloudhop use --off [cloud]` | Stop using the alias of every cloud, or of one (`aws`). |
+| `cloudhop use <alias> --default` | Same, and every new terminal starts with it. A production alias also needs `--yes`. |
+| `cloudhop use --no-default [cloud]` | New terminals start with no alias again (of every cloud, or of one). |
 | `cloudhop allow [folder]` / `cloudhop deny [folder]` | Trust (or stop trusting) a folder's `.cloudhoprc`, so `cd` switches to its aliases. |
 | `cloudhop shell` | Set up your terminal once: adds one line to your shell's startup file and, if you use Starship, the alias segment to `starship.toml` (same as `cloudhop shell install`). |
 | `cloudhop shell zsh\|bash\|fish\|pwsh` | Print the integration script; that line runs it. |

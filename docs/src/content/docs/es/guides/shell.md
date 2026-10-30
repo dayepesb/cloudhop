@@ -66,6 +66,33 @@ Lo que hace cloudhop:
    prompt lo muestre y, cuando lleguen Azure y Google Cloud, puedas tener un
    alias de cada una activo al mismo tiempo.
 
+Una terminal nueva arranca sin alias, a menos que elijas uno por defecto.
+
+## Empieza cada terminal nueva con un alias: `--default`
+
+¿Usas la misma cuenta casi todo el día? Déjala por defecto:
+
+```bash
+cloudhop use license-qa --default   # esta terminal y cada una nueva
+cloudhop use --no-default           # las terminales nuevas vuelven a arrancar sin alias
+```
+
+Desde ese momento cada terminal que abras arranca con `license-qa`, y tu
+prompt lo muestra. Abrir una terminal nunca inicia sesión: lo hace el primer
+comando `aws` si la sesión venció. También puedes marcar **Default** junto
+al alias en [`cloudhop ui`](/cloudhop/es/guides/web-ui/).
+
+Quién gana, del más fuerte al más débil:
+
+1. Un `cloudhop use` que escribes en una terminal, solo en esa terminal.
+2. El `.cloudhoprc` de la carpeta donde estás.
+3. El alias por defecto. Al salir de la carpeta de un proyecto vuelves a él.
+
+Hay uno por defecto por nube. Un alias de producción solo puede ser el
+alias por defecto si lo confirmas (`--default --yes`), porque cada terminal
+arrancaría en él; tu prompt lo muestra en rojo. `cloudhop status` te dice
+cuál es.
+
 ## Sigue escribiendo `aws`
 
 Con la integración, `aws` en tu terminal pasa por cloudhop mientras usas un
@@ -124,6 +151,9 @@ cloudhop › Using billing-dev (billing-account / Dev, us-east-1), from .cloudho
 ❯ cd ~
 cloudhop › Left the folder of billing-dev: no alias in this shell.
 ```
+
+Con un [alias por defecto](#empieza-cada-terminal-nueva-con-un-alias---default),
+al salir de un proyecto vuelves a él.
 
 **Un compañero que clona el repositorio** ejecuta `cloudhop allow` una vez
 en él. Su alias debe llamarse igual: comparte los nombres con

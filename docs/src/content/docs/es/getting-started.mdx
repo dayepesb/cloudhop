@@ -126,7 +126,8 @@ cloudhop use --off             # vuelve a no usar ninguna cuenta
 `cloudhop use` es el interruptor entre cuentas: pone la cuenta, el rol y la
 región del alias **solo en esta terminal**. Las demás terminales conservan
 la suya, así que puedes tener `acme-dev` en una pestaña y `acme-prod` en
-otra.
+otra. Una terminal nueva arranca sin alias; para que cada una arranque con
+la cuenta que más usas, ejecuta `cloudhop use acme-dev --default`.
 
 ### Cuando una sesión vence
 

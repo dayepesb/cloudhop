@@ -36,7 +36,7 @@ const aliasVar = (provider: ProviderId) => `CLOUDHOP_${provider.toUpperCase()}_A
 const prodVar = (provider: ProviderId) => `CLOUDHOP_${provider.toUpperCase()}_PROD`;
 
 /** POSIX-ish shells share almost everything; only the `cd` hook and completion differ. */
-function posixScript(shell: 'zsh' | 'bash', clis: readonly WrappedCli[]): string {
+function posixScript(shell: 'zsh' | 'bash', clis: readonly WrappedCli[], start: boolean): string {
   const wrappers = clis
     .map(
       ({ command, provider }) => `${command}() {
@@ -135,12 +135,12 @@ _cloudhop_cd() {
   _cloudhop_rc_seen=$rc
   local out
   if [ -n "$rc" ]; then out="$(command cloudhop use --emit ${shell} --from "$rc")"
-  elif [ -n "$CLOUDHOP_RC" ]; then out="$(command cloudhop use --emit ${shell} --leave)"
+  elif [ -n "$CLOUDHOP_RC$_cloudhop_start" ]; then out="$(command cloudhop use --emit ${shell} --leave)"
   else return 0; fi
   eval "$out"
 }
 ${hook}
-_cloudhop_cd
+${start ? '# New terminals start with your default alias (`cloudhop use <alias> --default`).\n_cloudhop_start=1 _cloudhop_rc_seen=-\n_cloudhop_cd\nunset _cloudhop_start' : '_cloudhop_cd'}
 ${wrappers}
 ${completion}
 # The aliases in use, e.g. "aws:acme-dev". Shown in your prompt by itself
@@ -154,7 +154,7 @@ ${promptHook}
 `;
 }
 
-function fishScript(clis: readonly WrappedCli[]): string {
+function fishScript(clis: readonly WrappedCli[], start: boolean): string {
   const wrappers = clis
     .map(
       ({ command, provider }) => `function ${command} --wraps ${command}
@@ -201,11 +201,11 @@ function _cloudhop_cd --on-variable PWD
   set -g _cloudhop_rc_seen $rc
   if test -n "$rc"
     command cloudhop use --emit fish --from $rc | source
-  else if test -n "$CLOUDHOP_RC"
+  else if test -n "$CLOUDHOP_RC$_cloudhop_start"
     command cloudhop use --emit fish --leave | source
   end
 end
-_cloudhop_cd
+${start ? '# New terminals start with your default alias (`cloudhop use <alias> --default`).\nset -g _cloudhop_start 1\nset -g _cloudhop_rc_seen -\n_cloudhop_cd\nset -e _cloudhop_start' : '_cloudhop_cd'}
 ${wrappers}
 complete -c hop -f -n 'test (count (commandline -opc)) -eq 1' -a '(command cloudhop __complete aliases 2>/dev/null)'
 complete -c cloudhop -f -n 'test (count (commandline -opc)) -eq 1' -a '(command cloudhop __complete commands 2>/dev/null)'
@@ -230,7 +230,7 @@ end
 `;
 }
 
-function pwshScript(clis: readonly WrappedCli[]): string {
+function pwshScript(clis: readonly WrappedCli[], start: boolean): string {
   const wrappers = clis
     .map(
       ({
@@ -273,10 +273,11 @@ function _CloudhopCd {
   }
   if ($rc -eq $script:CloudhopRcSeen) { return }
   $script:CloudhopRcSeen = $rc
-  $out = if ($rc) { & $script:CloudhopExe use --emit pwsh --from $rc } elseif ($env:CLOUDHOP_RC) { & $script:CloudhopExe use --emit pwsh --leave }
+  $out = if ($rc) { & $script:CloudhopExe use --emit pwsh --from $rc } elseif ($env:CLOUDHOP_RC -or $script:CloudhopStart) { & $script:CloudhopExe use --emit pwsh --leave }
+  $script:CloudhopStart = $false
   if ($out) { $out | Out-String | Invoke-Expression }
 }
-$script:CloudhopPrompt = $function:prompt
+${start ? '# New terminals start with your default alias (`cloudhop use <alias> --default`).\n$script:CloudhopStart = $true\n' : ''}$script:CloudhopPrompt = $function:prompt
 function prompt {
   _CloudhopCd
   $out = & $script:CloudhopPrompt
@@ -309,11 +310,15 @@ ${prompt}
 `;
 }
 
-/** The integration script for a shell, wrapping the CLIs of the clouds cloudhop supports. */
-export function shellScript(shell: Shell, clis: readonly WrappedCli[]): string {
-  if (shell === 'fish') return fishScript(clis);
-  if (shell === 'pwsh') return pwshScript(clis);
-  return posixScript(shell, clis);
+/**
+ * The integration script for a shell, wrapping the CLIs of the clouds
+ * cloudhop supports. With `start`, opening a terminal applies the default
+ * alias: each terminal runs the script afresh, so it sees the current one.
+ */
+export function shellScript(shell: Shell, clis: readonly WrappedCli[], start = false): string {
+  if (shell === 'fish') return fishScript(clis, start);
+  if (shell === 'pwsh') return pwshScript(clis, start);
+  return posixScript(shell, clis, start);
 }
 
 /** What `cloudhop shell starship` prints, for people who edit their config by hand. */
@@ -407,7 +412,11 @@ const starshipFile = () =>
  * startup file (after asking); `cloudhop shell starship` prints the prompt
  * segments for Starship.
  */
-export async function shellCommand(args: string[], clis: readonly WrappedCli[]): Promise<void> {
+export async function shellCommand(
+  args: string[],
+  clis: readonly WrappedCli[],
+  start = false,
+): Promise<void> {
   const { positional, flags } = parseArgs(args);
   if (positional[0] === 'starship') {
     process.stdout.write(starshipSnippet());
@@ -417,7 +426,7 @@ export async function shellCommand(args: string[], clis: readonly WrappedCli[]):
   // (`eval "$(cloudhop shell zsh)"`) names the shell and captures the output.
   const setUp = positional[0] === 'install' || (!positional[0] && process.stdout.isTTY);
   if (!setUp) {
-    process.stdout.write(shellScript(parseShell(positional[0]), clis));
+    process.stdout.write(shellScript(parseShell(positional[0]), clis, start));
     return;
   }
   const shell = parseShell(positional[1]);
