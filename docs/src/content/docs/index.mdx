@@ -5,9 +5,9 @@ template: splash
 hero:
   title: Every cloud account, one short alias away
   tagline: >-
-    cloudhop signs you in to your AWS SSO portals and personal accounts, gives
-    each account and role a short alias, and logs you in again only when a
-    session has expired. No access keys, no copied credentials.
+    Sign in to your AWS SSO portals and personal accounts once. cloudhop gives
+    each account and role a short alias, signs you in again only when a session
+    has expired, and never stores access keys.
   image:
     file: ../../assets/logo.svg
   actions:
@@ -23,139 +23,194 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, LinkCard, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+import { LinkCard, Steps } from '@astrojs/starlight/components';
+
+<div class="ch-section">
 
 ## The problem it solves
 
-If you work with AWS at a company, you probably have several SSO portals,
-dozens of accounts and a few roles in each, plus a personal account or two.
-Using them from the terminal means a lot of ceremony:
+Several SSO portals, dozens of accounts with a few roles each, a personal
+account or two. From the terminal, that means remembering profile names,
+logging in again in the middle of your work, and digging through the portal
+just to open the console.
 
-<Tabs>
-  <TabItem label="Without cloudhop">
-    ```bash
-    # Once per portal, by hand: profiles for every account and role you use
-    aws configure sso                       # repeat for each account/role...
-    vim ~/.aws/config                       # ...or edit dozens of profiles by hand
+<div class="ch-pair">
 
-    # Every morning, and again whenever a session expires mid-task
-    aws sso login --profile acme-prod
+```sh title="Without cloudhop" frame="terminal"
+# Once per account and role: write profiles by hand
+aws configure sso
+vim ~/.aws/config
 
-    # Every command: remember the exact profile name and region
-    aws s3 ls --profile AdministratorAccess-123456789012 --region us-east-1
+# Every morning, and again when it expires mid-task
+aws sso login --profile acme-prod
 
-    # Personal accounts: long-lived access keys in ~/.aws/credentials
-    ```
-  </TabItem>
-  <TabItem label="With cloudhop">
-    ```bash
-    # Once per portal: sign in, tick the accounts you want, name them
-    cloudhop add
+# Every command: the exact profile name and region
+aws s3 ls --profile AdministratorAccess-123456789012 \
+  --region us-east-1
+```
 
-    # Every command: a short alias that already knows account, role and region
-    hop acme-prod s3 ls
+```sh title="With cloudhop" frame="terminal"
+# Once: sign in to each portal, name your accounts
+cloudhop add
+cloudhop shell
 
-    # Expired session? Nothing to do: cloudhop signs you in again and runs it
-    ```
-  </TabItem>
-</Tabs>
+# Switch the terminal to an account, type plain aws.
+# Expired session? It signs you in and carries on.
+cloudhop use acme-prod
+aws s3 ls
+aws ecs list-clusters
+```
 
-No more copied keys, no more hand-written profiles, no more "the SSO session
-has expired" in the middle of your work.
+</div>
+</div>
 
-## How it works
+<div class="ch-section">
+
+## Two ways to work
+
+<div class="ch-pair">
+<div class="ch-panel">
+<p class="ch-eyebrow">Switch the terminal</p>
+
+The everyday way. Switch once and type plain `aws`,
+Terraform or any SDK. Your prompt shows the alias, and a project's
+`.cloudhoprc` switches for you on `cd`.
+
+```sh frame="none"
+cloudhop use acme-dev
+aws ecs list-clusters
+cloudhop use acme-prod
+```
+
+</div>
+<div class="ch-panel">
+<p class="ch-eyebrow">One command at a time</p>
+
+For one-off commands in another account, or many accounts at once,
+without switching the terminal.
+
+```sh frame="none"
+hop acme-qa ecs list-clusters
+cloudhop console acme-qa s3
+cloudhop each 'acme-*' -- s3 ls
+```
+
+</div>
+</div>
+</div>
+
+<div class="ch-section">
+
+## What you get
+
+<div class="ch-features">
+<div class="ch-feature">
+<p class="ch-feature-title">Short aliases</p>
+<p>Account, role and region in one word. They are real profiles in <code>~/.aws/config</code>, so your other tools see them too.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Signs in only when needed</p>
+<p>An expired session renews silently or opens your browser, then your command runs. Nothing runs in the background.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">The console, already signed in</p>
+<p><code>cloudhop console acme-dev s3</code> opens it straight away. No portal, no hunting for the account among twenty.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Production protection</p>
+<p>Mark an alias as production: reads run, anything that may change resources asks first. Your prompt turns red.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Many accounts at once</p>
+<p>Run one command across aliases by name, list, pattern or regex, in parallel, with every line tagged by alias.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Folders that know their account</p>
+<p>A <code>.cloudhoprc</code> pins aliases to a project, so <code>cd</code> switches for you. You approve each file before it does anything.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Your AI assistant knows it</p>
+<p>Claude Code, Kiro, Copilot, Cursor and Codex learn to ask which alias, run with <code>hop</code> and confirm before changes.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">No access keys, ever</p>
+<p>Only temporary credentials, from IAM Identity Center or <code>aws login</code>. Nothing to rotate, nothing to leak.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Terminal or browser</p>
+<p>Prefer clicking? <code>cloudhop ui</code> opens a local page to add portals, pick accounts and change regions.</p>
+</div>
+</div>
+</div>
+
+<div class="ch-section">
+
+## Every `aws` command you know, two ways
+
+`acme-dev` and `acme-prod` are example aliases: you name yours when you add
+your accounts. Output, pipes, `--query` and exit codes behave exactly as
+with `aws`.
+
+| With the AWS CLI alone | Switching the terminal | Naming the alias in the command |
+| --- | --- | --- |
+| `aws s3 ls --profile AdministratorAccess-123456789012` | `cloudhop use acme-prod`<br/>`aws s3 ls` | `hop acme-prod s3 ls` |
+| `aws sts get-caller-identity --profile acme-prod` | `aws sts get-caller-identity` | `hop acme-prod` |
+| `aws logs tail /app --follow --profile acme-dev` | `aws logs tail /app --follow` | `hop acme-dev logs tail /app --follow` |
+| `AWS_PROFILE=acme-prod terraform plan` | `terraform plan` | `cloudhop exec acme-prod -- terraform plan` |
+
+After `cloudhop use`, every following command runs as that alias until you
+switch again. `hop <alias>` affects only that one command.
+
+</div>
+
+<div class="ch-section">
+
+## Start in a minute
 
 <Steps>
 
-1. **You add a source once.** A company SSO portal (IAM Identity Center) or
-   your personal account. cloudhop signs you in through the browser, exactly
-   like the AWS CLI does.
+1. Install it (Node.js 20 or newer):
 
-2. **You pick accounts and name them.** cloudhop lists every account and role
-   you can use; the ones you choose become aliases, each with its own region.
-   They are written as normal profiles in `~/.aws/config`.
+   ```sh
+   npm install --global cloudhop
+   ```
 
-3. **You use `hop <alias>` instead of `aws`.** cloudhop checks the session
-   (renewing it silently or opening the browser only if it really expired),
-   then runs the AWS CLI with that alias' profile and region.
+2. Add your SSO portal or personal account: sign in, tick the accounts you
+   want and give each a short alias.
+
+   ```sh
+   cloudhop add
+   ```
+
+3. Set up your terminal, once. Then open a new one.
+
+   ```sh
+   cloudhop shell
+   ```
+
+4. Switch to an account and use `aws` as always (`<alias>` is a name you
+   gave in step 2):
+
+   ```sh
+   cloudhop use <alias>
+   aws s3 ls
+   ```
 
 </Steps>
 
-## Just like the `aws` command
+</div>
 
-`hop <alias>` **is** the AWS CLI: everything after the alias goes to `aws`
-untouched. Take any `aws` command you know, replace `aws` with `hop <alias>`,
-and drop `--profile`:
+<div class="ch-section">
 
-| With the AWS CLI | With cloudhop |
-| --- | --- |
-| `aws s3 ls --profile acme-prod` | `hop acme-prod s3 ls` |
-| `aws sts get-caller-identity --profile acme-prod` | `hop acme-prod` |
-| `aws ec2 describe-instances --profile acme-prod --region eu-west-1` | `hop acme-prod ec2 describe-instances --region eu-west-1` |
-| `aws logs tail /app --follow --profile acme-dev` | `hop acme-dev logs tail /app --follow` |
-| `AWS_PROFILE=acme-prod terraform plan` | `cloudhop exec acme-prod -- terraform plan` |
+## Learn more
 
-Output, pipes, `--output json`, `--query` and exit codes behave exactly as
-with `aws`. More in [Use hop like the aws command](guides/hop-like-aws/).
-
-## From zero to your first command
-
-```bash
-npm install --global cloudhop
-cloudhop setup                 # add your SSO portal, sign in, pick accounts
-hop acme-prod s3 ls            # runs `aws s3 ls` as that account, role and region
-```
-
-That's it. Next week, when the session has expired, `hop acme-prod s3 ls`
-signs you in again by itself and then runs your command.
-
-## Your AI assistant knows it too
-
-Claude Code, Kiro, GitHub Copilot, Cursor and Codex can run cloud commands for
-you. Teach them cloudhop once:
-
-```bash
-cloudhop agent install
-```
-
-From then on your assistant asks which alias to use, checks the session, runs
-commands with `hop` and confirms before changing anything, in every new chat.
-See [AI assistants](guides/ai-assistants/).
-
-## Why cloudhop
-
-<CardGrid stagger>
-  <Card title="One login per portal" icon="rocket">
-    Sign in once to each IAM Identity Center portal. cloudhop finds every
-    account and role you can use and turns the ones you pick into aliases.
-  </Card>
-  <Card title="Logs in only when needed" icon="approve-check">
-    Nothing runs in the background. When you use an alias with an expired
-    session, cloudhop renews it silently or opens the browser, then carries on.
-  </Card>
-  <Card title="No access keys, ever" icon="seti:lock">
-    Only temporary credentials: IAM Identity Center for companies, `aws login`
-    for personal accounts. Nothing to rotate, nothing to leak.
-  </Card>
-  <Card title="Works with your tools" icon="puzzle">
-    Aliases are real profiles in `~/.aws/config`, so Terraform, the SDKs and
-    your IDE see them too. `cloudhop exec` covers everything else.
-  </Card>
-  <Card title="Terminal or browser" icon="laptop">
-    Prefer clicking? `cloudhop ui` opens a local page to add portals, pick
-    accounts and change regions.
-  </Card>
-  <Card title="Open source" icon="open-book">
-    Apache 2.0, built in the open, published to npm with provenance from
-    GitHub Actions.
-  </Card>
-</CardGrid>
-
-## Where to next
-
-<CardGrid>
+<div class="ch-links">
   <LinkCard title="Getting started" description="Install, add your first portal and run a command." href="getting-started/" />
-  <LinkCard title="Company SSO portals" description="Several portals, many accounts, automatic renewal." href="guides/aws-sso/" />
-  <LinkCard title="Personal accounts" description="Your own AWS account without access keys or Identity Center." href="guides/personal-accounts/" />
-  <LinkCard title="Command reference" description="Every command and option." href="reference/commands/" />
-</CardGrid>
+  <LinkCard title="Use an alias in your terminal" description="cloudhop use, .cloudhoprc folders and your prompt." href="guides/shell/" />
+  <LinkCard title="AI assistants" description="Teach Claude Code, Kiro, Copilot, Cursor or Codex to use cloudhop." href="guides/ai-assistants/" />
+  <LinkCard title="Command reference" description="Every command, option and variable." href="reference/commands/" />
+</div>
+
+<p class="ch-footnote">Open source under Apache 2.0, published to npm with provenance from GitHub Actions. AWS today; Azure and Google Cloud are on the <a href="https://github.com/dayepesb/cloudhop/issues?q=is%3Aopen+label%3Aroadmap">roadmap</a>.</p>
+
+</div>

@@ -14,6 +14,8 @@ const BOOLEAN_FLAGS = new Set([
   'force',
   'prod',
   'off',
+  'save',
+  'leave',
 ]);
 
 /** "start-url" → "startUrl", so flags line up with provider field keys. */

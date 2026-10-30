@@ -107,6 +107,16 @@ export interface Overview {
   aliases: AliasStatus[];
 }
 
+export interface ShellEnv {
+  provider: ProviderId;
+  /** Variables to remove before setting `env`, so nothing from another alias is left behind. */
+  clear: readonly string[];
+  env: ProcessEnv;
+  region: string | undefined;
+  label: string | undefined;
+  prod: boolean;
+}
+
 export interface RunOverrides {
   region?: string;
 }
@@ -527,6 +537,31 @@ export class CloudhopApp {
     const provider = this.provider(resolved.source.provider);
     await this.ensureSession(resolved.source.id);
     return provider.processEnv(resolved, mode);
+  }
+
+  /**
+   * What `cloudhop use` puts in a shell: the alias' CLI environment (profile
+   * and region, never credentials) and every variable of that provider to
+   * clear first. With `login: false` it never signs in, so entering a folder
+   * never opens a browser: the first command does it if needed.
+   */
+  async shellEnv(name: string, { login }: { login: boolean }): Promise<ShellEnv> {
+    const resolved = await this.usableAlias(name, {});
+    const provider = this.provider(resolved.source.provider);
+    if (login) await this.ensureSession(resolved.source.id);
+    return {
+      provider: provider.id,
+      clear: provider.shellVars,
+      env: await provider.processEnv(resolved, 'cli'),
+      region: resolved.region,
+      label: resolved.target?.label,
+      prod: resolved.alias.prod === true,
+    };
+  }
+
+  /** The variables `cloudhop use --off <provider>` removes from a shell. */
+  shellVars(provider: ProviderId): readonly string[] {
+    return this.provider(provider).shellVars;
   }
 
   // ── Health ───────────────────────────────────────────────────────────────

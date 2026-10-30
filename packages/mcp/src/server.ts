@@ -8,7 +8,7 @@ import { createTools } from './tools';
  * first lines self-contained.
  */
 export const MCP_INSTRUCTIONS = `cloudhop gives each cloud account + role + region a short alias and signs the user in only when a session expired.
-Before the first cloud operation in a conversation: call list_aliases, show the user the aliases (name, account/role, region) and ask which one to use. Never guess the alias.
+Before the first cloud operation in a conversation: call list_aliases, show the user the aliases (name, account/role, region) and ask which one to use. Never guess the alias. If list_aliases has folder.aliases (the project's .cloudhoprc) or inUse, offer that alias first, but still ask.
 Use run_cloud_cli for cloud CLI commands, never --profile. Read-only commands may run once the alias is chosen; before anything that creates, changes or deletes resources, show the alias, account, region and exact command, and wait for the user's explicit OK. Aliases with prod: true are production: run_cloud_cli refuses changes there until the user approves and you pass confirm_production: true.
 To show the user something in the web console, call open_console (it opens their browser, already signed in).
 If a tool returns LOGIN_REQUIRED or alias_status says browser-sign-in: tell the user their browser will open, then call login (it waits up to 5 minutes for them to approve). Never print or ask for credentials.`;
@@ -28,6 +28,8 @@ export interface McpServerOptions {
   version: string;
   input?: NodeJS.ReadableStream;
   output?: NodeJS.WritableStream;
+  /** Extra hints for list_aliases: aliases in use in the user's shell, the project's .cloudhoprc. */
+  context?: () => Promise<object>;
 }
 
 /**
@@ -40,8 +42,9 @@ export function serveMcp({
   version,
   input = process.stdin,
   output = process.stdout,
+  context,
 }: McpServerOptions): Promise<void> {
-  const tools = createTools(app);
+  const tools = createTools(app, context);
   const byName = new Map(tools.map((t) => [t.name, t]));
   const send = (message: unknown) => output.write(`${JSON.stringify(message)}\n`);
   const reply = (id: JsonRpcRequest['id'], result: unknown) => send({ jsonrpc: '2.0', id, result });

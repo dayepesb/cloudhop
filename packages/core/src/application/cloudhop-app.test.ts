@@ -34,6 +34,7 @@ class FakeProvider implements CloudProvider {
   readonly cli = { command: 'aws', displayName: 'AWS CLI', minVersion: '2.32.0' };
   readonly sourceKinds = [{ kind: 'sso', label: 'SSO', fields: [] }];
   readonly identityArgs = ['sts', 'get-caller-identity'];
+  readonly shellVars = ['FAKE_PROFILE'];
   isReadOnly(args: readonly string[]) {
     return args[1]?.startsWith('list') ?? true;
   }

@@ -7,6 +7,12 @@ description: hop is the AWS CLI with the account, role and region already chosen
 runs `aws <args>` with the alias' profile and region set, after making sure
 you are signed in. Anything you can do with `aws`, you can do with `hop`.
 
+:::tip[Rather keep typing `aws`?]
+Switch the terminal instead: `cloudhop use acme-prod`, then plain `aws ...`.
+See [Use an alias in your terminal](/cloudhop/guides/shell/). `hop` is
+handy for one-off commands in another account without switching.
+:::
+
 ## The rule
 
 Take any `aws` command, replace `aws` with `hop <alias>`, and remove

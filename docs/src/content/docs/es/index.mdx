@@ -5,10 +5,9 @@ template: splash
 hero:
   title: Cada cuenta de la nube, a un alias corto de distancia
   tagline: >-
-    cloudhop inicia sesión por ti en tus portales de AWS SSO y cuentas
-    personales, le da a cada cuenta y rol un alias corto, y vuelve a iniciar
-    sesión solo cuando una sesión venció. Sin access keys ni credenciales
-    copiadas.
+    Inicia sesión una vez en tus portales de AWS SSO y cuentas personales.
+    cloudhop le da a cada cuenta y rol un alias corto, vuelve a iniciar sesión
+    solo cuando una sesión venció y nunca guarda access keys.
   image:
     file: ../../../assets/logo.svg
   actions:
@@ -24,142 +23,194 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, LinkCard, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+import { LinkCard, Steps } from '@astrojs/starlight/components';
+
+<div class="ch-section">
 
 ## El problema que resuelve
 
-Si trabajas con AWS en una empresa, seguramente tienes varios portales SSO,
-decenas de cuentas con varios roles en cada una, y además una o dos cuentas
-personales. Usarlas desde la terminal implica mucha ceremonia:
+Varios portales SSO, decenas de cuentas con varios roles cada una, una o dos
+cuentas personales. En la terminal eso significa recordar nombres de
+perfiles, volver a iniciar sesión en medio del trabajo y buscar en el portal
+solo para abrir la consola.
 
-<Tabs>
-  <TabItem label="Sin cloudhop">
-    ```bash
-    # Una vez por portal, a mano: perfiles para cada cuenta y rol que usas
-    aws configure sso                       # repetir por cada cuenta/rol...
-    vim ~/.aws/config                       # ...o editar decenas de perfiles a mano
+<div class="ch-pair">
 
-    # Cada mañana, y otra vez cuando la sesión vence en medio del trabajo
-    aws sso login --profile acme-prod
+```sh title="Sin cloudhop" frame="terminal"
+# Una vez por cuenta y rol: escribir perfiles a mano
+aws configure sso
+vim ~/.aws/config
 
-    # Cada comando: recordar el nombre exacto del perfil y la región
-    aws s3 ls --profile AdministratorAccess-123456789012 --region us-east-1
+# Cada mañana, y otra vez cuando vence a mitad de algo
+aws sso login --profile acme-prod
 
-    # Cuentas personales: access keys de larga duración en ~/.aws/credentials
-    ```
-  </TabItem>
-  <TabItem label="Con cloudhop">
-    ```bash
-    # Una vez por portal: inicia sesión, marca las cuentas que quieres y nómbralas
-    cloudhop add
+# Cada comando: el nombre exacto del perfil y la región
+aws s3 ls --profile AdministratorAccess-123456789012 \
+  --region us-east-1
+```
 
-    # Cada comando: un alias corto que ya sabe cuenta, rol y región
-    hop acme-prod s3 ls
+```sh title="Con cloudhop" frame="terminal"
+# Una vez: inicia sesión en cada portal y nombra tus cuentas
+cloudhop add
+cloudhop shell
 
-    # ¿Sesión vencida? Nada que hacer: cloudhop vuelve a iniciar sesión y lo ejecuta
-    ```
-  </TabItem>
-</Tabs>
+# Cambia la terminal a una cuenta y escribe aws normal.
+# ¿Sesión vencida? Inicia sesión por ti y sigue.
+cloudhop use acme-prod
+aws s3 ls
+aws ecs list-clusters
+```
 
-Sin copiar llaves, sin escribir perfiles a mano y sin el "the SSO session has
-expired" en medio de tu trabajo.
+</div>
+</div>
 
-## Cómo funciona
+<div class="ch-section">
+
+## Dos formas de trabajar
+
+<div class="ch-pair">
+<div class="ch-panel">
+<p class="ch-eyebrow">Cambia la terminal</p>
+
+La forma del día a día. Cambias una vez y escribes `aws`,
+Terraform o cualquier SDK normal. Tu prompt muestra el alias, y el
+`.cloudhoprc` de un proyecto cambia por ti al hacer `cd`.
+
+```sh frame="none"
+cloudhop use acme-dev
+aws ecs list-clusters
+cloudhop use acme-prod
+```
+
+</div>
+<div class="ch-panel">
+<p class="ch-eyebrow">Un comando a la vez</p>
+
+Para comandos puntuales en otra cuenta, o en muchas cuentas a la vez, sin
+cambiar la terminal.
+
+```sh frame="none"
+hop acme-qa ecs list-clusters
+cloudhop console acme-qa s3
+cloudhop each 'acme-*' -- s3 ls
+```
+
+</div>
+</div>
+</div>
+
+<div class="ch-section">
+
+## Lo que obtienes
+
+<div class="ch-features">
+<div class="ch-feature">
+<p class="ch-feature-title">Alias cortos</p>
+<p>Cuenta, rol y región en una palabra. Son perfiles reales en <code>~/.aws/config</code>, así que tus otras herramientas también los ven.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Inicia sesión solo cuando hace falta</p>
+<p>Una sesión vencida se renueva sola o abre tu navegador, y luego tu comando se ejecuta. Nada corre en segundo plano.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">La consola, con la sesión iniciada</p>
+<p><code>cloudhop console acme-dev s3</code> la abre directo. Sin portal, sin buscar la cuenta entre veinte.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Protección de producción</p>
+<p>Marca un alias como producción: las lecturas corren y todo lo que pueda cambiar recursos pregunta primero. Tu prompt se pone rojo.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Muchas cuentas a la vez</p>
+<p>Ejecuta un comando en varios alias por nombre, lista, patrón o regex, en paralelo, con cada línea marcada con su alias.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Carpetas que saben su cuenta</p>
+<p>Un <code>.cloudhoprc</code> fija alias a un proyecto, así <code>cd</code> cambia por ti. Apruebas cada archivo antes de que haga algo.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Tu asistente de IA lo sabe usar</p>
+<p>Claude Code, Kiro, Copilot, Cursor y Codex aprenden a preguntar qué alias usar, ejecutar con <code>hop</code> y confirmar antes de cambiar algo.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Nunca access keys</p>
+<p>Solo credenciales temporales, de IAM Identity Center o <code>aws login</code>. Nada que rotar, nada que se filtre.</p>
+</div>
+<div class="ch-feature">
+<p class="ch-feature-title">Terminal o navegador</p>
+<p>¿Prefieres hacer clic? <code>cloudhop ui</code> abre una página local para agregar portales, elegir cuentas y cambiar regiones.</p>
+</div>
+</div>
+</div>
+
+<div class="ch-section">
+
+## Todos los comandos `aws` que conoces, de dos formas
+
+`acme-dev` y `acme-prod` son alias de ejemplo: tú les pones nombre a los
+tuyos cuando agregas tus cuentas. La salida, los pipes, `--query` y los
+códigos de salida funcionan exactamente igual que con `aws`.
+
+| Solo con el AWS CLI | Cambiando la terminal | Nombrando el alias en el comando |
+| --- | --- | --- |
+| `aws s3 ls --profile AdministratorAccess-123456789012` | `cloudhop use acme-prod`<br/>`aws s3 ls` | `hop acme-prod s3 ls` |
+| `aws sts get-caller-identity --profile acme-prod` | `aws sts get-caller-identity` | `hop acme-prod` |
+| `aws logs tail /app --follow --profile acme-dev` | `aws logs tail /app --follow` | `hop acme-dev logs tail /app --follow` |
+| `AWS_PROFILE=acme-prod terraform plan` | `terraform plan` | `cloudhop exec acme-prod -- terraform plan` |
+
+Después de `cloudhop use`, todos los comandos siguientes corren como ese
+alias hasta que cambies otra vez. `hop <alias>` afecta solo ese comando.
+
+</div>
+
+<div class="ch-section">
+
+## Empieza en un minuto
 
 <Steps>
 
-1. **Agregas una fuente una sola vez.** Un portal SSO de empresa (IAM
-   Identity Center) o tu cuenta personal. cloudhop inicia sesión en el
-   navegador, igual que lo hace el AWS CLI.
+1. Instálalo (Node.js 20 o más reciente):
 
-2. **Eliges cuentas y les pones nombre.** cloudhop lista todas las cuentas y
-   roles que puedes usar; las que elijas se vuelven alias, cada uno con su
-   región. Se escriben como perfiles normales en `~/.aws/config`.
+   ```sh
+   npm install --global cloudhop
+   ```
 
-3. **Usas `hop <alias>` en lugar de `aws`.** cloudhop revisa la sesión (la
-   renueva en silencio o abre el navegador solo si de verdad venció) y luego
-   ejecuta el AWS CLI con el perfil y la región de ese alias.
+2. Agrega tu portal SSO o cuenta personal: inicias sesión, marcas las
+   cuentas que quieres y le das a cada una un alias corto.
+
+   ```sh
+   cloudhop add
+   ```
+
+3. Configura tu terminal, una sola vez. Luego abre una nueva.
+
+   ```sh
+   cloudhop shell
+   ```
+
+4. Cambia a una cuenta y usa `aws` como siempre (`<alias>` es un nombre que
+   pusiste en el paso 2):
+
+   ```sh
+   cloudhop use <alias>
+   aws s3 ls
+   ```
 
 </Steps>
 
-## Igual que el comando `aws`
+</div>
 
-`hop <alias>` **es** el AWS CLI: todo lo que va después del alias le llega a
-`aws` sin cambios. Toma cualquier comando de `aws` que conozcas, cambia `aws`
-por `hop <alias>` y quita `--profile`:
+<div class="ch-section">
 
-| Con el AWS CLI | Con cloudhop |
-| --- | --- |
-| `aws s3 ls --profile acme-prod` | `hop acme-prod s3 ls` |
-| `aws sts get-caller-identity --profile acme-prod` | `hop acme-prod` |
-| `aws ec2 describe-instances --profile acme-prod --region eu-west-1` | `hop acme-prod ec2 describe-instances --region eu-west-1` |
-| `aws logs tail /app --follow --profile acme-dev` | `hop acme-dev logs tail /app --follow` |
-| `AWS_PROFILE=acme-prod terraform plan` | `cloudhop exec acme-prod -- terraform plan` |
+## Sigue aprendiendo
 
-La salida, las tuberías, `--output json`, `--query` y los códigos de salida se
-comportan igual que con `aws`. Más en
-[Usa hop como el comando aws](guides/hop-like-aws/).
+<div class="ch-links">
+  <LinkCard title="Primeros pasos" description="Instala, agrega tus cuentas y configura tu terminal." href="getting-started/" />
+  <LinkCard title="Usa un alias en tu terminal" description="cloudhop use, carpetas con .cloudhoprc y tu prompt." href="guides/shell/" />
+  <LinkCard title="Asistentes de IA" description="Enséñale cloudhop a Claude Code, Kiro, Copilot, Cursor o Codex." href="guides/ai-assistants/" />
+  <LinkCard title="Referencia de comandos" description="Todos los comandos, opciones y variables." href="reference/commands/" />
+</div>
 
-## De cero a tu primer comando
+<p class="ch-footnote">Open source con licencia Apache 2.0, publicado en npm con procedencia verificada desde GitHub Actions. Hoy AWS; Azure y Google Cloud están en el <a href="https://github.com/dayepesb/cloudhop/issues?q=is%3Aopen+label%3Aroadmap">roadmap</a>.</p>
 
-```bash
-npm install --global cloudhop
-cloudhop setup                 # agrega tu portal SSO, inicia sesión, elige cuentas
-hop acme-prod s3 ls            # ejecuta `aws s3 ls` con esa cuenta, rol y región
-```
-
-Eso es todo. La próxima semana, cuando la sesión haya vencido,
-`hop acme-prod s3 ls` vuelve a iniciar sesión por sí solo y luego ejecuta tu
-comando.
-
-## Tu asistente de IA también lo sabe usar
-
-Claude Code, Kiro, GitHub Copilot, Cursor y Codex pueden ejecutar comandos en
-la nube por ti. Enséñales cloudhop una sola vez:
-
-```bash
-cloudhop agent install
-```
-
-Desde ahí tu asistente te pregunta qué alias usar, revisa la sesión, ejecuta
-los comandos con `hop` y confirma antes de cambiar algo, en cada chat nuevo.
-Consulta [Asistentes de IA](guides/ai-assistants/).
-
-## Por qué cloudhop
-
-<CardGrid stagger>
-  <Card title="Un inicio de sesión por portal" icon="rocket">
-    Inicia sesión una vez en cada portal de IAM Identity Center. cloudhop
-    encuentra todas las cuentas y roles que puedes usar y convierte los que
-    elijas en alias.
-  </Card>
-  <Card title="Inicia sesión solo cuando hace falta" icon="approve-check">
-    Nada se ejecuta en segundo plano. Cuando usas un alias con la sesión
-    vencida, cloudhop la renueva en silencio o abre el navegador, y luego sigue.
-  </Card>
-  <Card title="Nunca access keys" icon="seti:lock">
-    Solo credenciales temporales: IAM Identity Center para empresas y
-    `aws login` para cuentas personales. Nada que rotar, nada que se filtre.
-  </Card>
-  <Card title="Funciona con tus herramientas" icon="puzzle">
-    Los alias son perfiles reales en `~/.aws/config`, así que Terraform, los
-    SDKs y tu IDE también los ven. `cloudhop exec` cubre todo lo demás.
-  </Card>
-  <Card title="Terminal o navegador" icon="laptop">
-    ¿Prefieres hacer clic? `cloudhop ui` abre una página local para agregar
-    portales, elegir cuentas y cambiar regiones.
-  </Card>
-  <Card title="Código abierto" icon="open-book">
-    Apache 2.0, desarrollado en abierto y publicado en npm con provenance
-    desde GitHub Actions.
-  </Card>
-</CardGrid>
-
-## ¿Y ahora qué?
-
-<CardGrid>
-  <LinkCard title="Primeros pasos" description="Instala, agrega tu primer portal y ejecuta un comando." href="getting-started/" />
-  <LinkCard title="Portales SSO de empresa" description="Varios portales, muchas cuentas, renovación automática." href="guides/aws-sso/" />
-  <LinkCard title="Cuentas personales" description="Tu propia cuenta de AWS sin access keys ni Identity Center." href="guides/personal-accounts/" />
-  <LinkCard title="Referencia de comandos" description="Todos los comandos y opciones." href="reference/commands/" />
-</CardGrid>
+</div>

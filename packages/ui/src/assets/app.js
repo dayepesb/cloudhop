@@ -35,7 +35,8 @@ const aliasFilter = { text: '', source: '', prodOnly: false };
 /** `#/aliases?source=acme` → route "aliases", filtered by that source. */
 function readRoute() {
   const match = /^#\/([a-z]+)(?:\?(.*))?$/.exec(location.hash);
-  route = match && PAGES[match[1]] ? match[1] : 'aliases';
+  // Own keys only: "#/constructor" must not reach Object.prototype.
+  route = match && Object.hasOwn(PAGES, match[1]) ? match[1] : 'aliases';
   const query = new URLSearchParams(match?.[2] ?? '');
   if (query.has('source')) aliasFilter.source = query.get('source');
 }
@@ -200,13 +201,14 @@ function render() {
     else link.removeAttribute('aria-current');
   }
   document.title = `${PAGES[route]} · cloudhop`;
-  const pages = {
-    aliases: aliasesPage,
-    sources: sourcesPage,
-    assistants: assistantsPage,
-    tools: toolsPage,
-  };
-  $main.replaceChildren(...pages[route]());
+  const pages = new Map([
+    ['aliases', aliasesPage],
+    ['sources', sourcesPage],
+    ['assistants', assistantsPage],
+    ['tools', toolsPage],
+  ]);
+  const page = pages.get(route) ?? aliasesPage;
+  $main.replaceChildren(...page());
   if (route === 'assistants') loadAssistants();
   if (route === 'tools') loadTools();
 }

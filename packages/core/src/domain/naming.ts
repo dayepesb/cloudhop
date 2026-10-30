@@ -3,6 +3,8 @@ import { CloudhopError } from './errors';
 /** Words the CLI uses as commands, so they can't be alias names. */
 export const RESERVED_NAMES = new Set([
   'add',
+  'allow',
+  'deny',
   'agent',
   'alias',
   'login',
@@ -56,10 +58,17 @@ export function suggestAliasName(...parts: string[]): string {
     .join('-')
     .toLowerCase()
     .replace(/access$/i, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 63);
-  return slug || 'alias';
+    .replace(/[^a-z0-9]+/g, '-');
+  return trimDashes(slug).slice(0, 63) || 'alias';
+}
+
+/** Strips leading and trailing "-" in linear time (a regex here can backtrack badly). */
+function trimDashes(text: string): string {
+  let start = 0;
+  let end = text.length;
+  while (start < end && text[start] === '-') start++;
+  while (end > start && text[end - 1] === '-') end--;
+  return text.slice(start, end);
 }
 
 const slugTokens = (text: string) =>

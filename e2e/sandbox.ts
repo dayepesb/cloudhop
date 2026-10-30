@@ -86,10 +86,11 @@ export async function sandbox(options: { seed?: boolean } = {}) {
     aws,
     env,
     /** Runs `cloudhop <args>` with stdin closed (no TTY), like CI or a script. */
-    run(args: string[], extraEnv: NodeJS.ProcessEnv = {}): Promise<RunResult> {
+    run(args: string[], extraEnv: NodeJS.ProcessEnv = {}, cwd?: string): Promise<RunResult> {
       return new Promise((resolve, reject) => {
         const child = spawn(process.execPath, [CLI, ...args], {
           env: env(extraEnv),
+          cwd,
           stdio: ['ignore', 'pipe', 'pipe'],
         });
         let stdout = '';

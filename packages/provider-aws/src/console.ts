@@ -79,5 +79,8 @@ export function portalShortcutUrl(
   destination: string,
 ): string {
   const params = new URLSearchParams({ account_id: accountId, role_name: roleName, destination });
-  return `${startUrl.replace(/\/+$/, '')}/#/console?${params}`;
+  let base = startUrl;
+  // Trailing slashes, trimmed without a regex that could backtrack on long input.
+  while (base.endsWith('/')) base = base.slice(0, -1);
+  return `${base}/#/console?${params}`;
 }

@@ -12,6 +12,9 @@ in the format the AWS CLI already uses. It never writes `~/.aws/credentials`.
 | `~/.config/cloudhop/targets.json` | cloudhop | Cache of the accounts and roles of each source | No |
 | `~/.config/cloudhop/assistants.json` | `cloudhop agent` | Which assistant skills cloudhop installed, to keep them up to date | No |
 | `~/.config/cloudhop/update-check.json` | cloudhop | When npm was last checked and the latest version | No |
+| `~/.config/cloudhop/trusted-folders.json` | `cloudhop allow`, `use --save` | The `.cloudhoprc` files you trusted, with a fingerprint of their content | No |
+| `~/.config/starship.toml` | `cloudhop shell`, only if you use Starship | A marked `# >>> cloudhop >>>` block and the alias segments in `format` (backup: `starship.toml.cloudhop-backup`) | No |
+| `.cloudhoprc` in a project | `cloudhop use --save`, or you | The alias each cloud uses in that folder, like `aws: license-qa` | No |
 | Assistant skills and MCP settings | `cloudhop agent install` | See [AI assistants](/cloudhop/guides/ai-assistants/) for every path | No |
 | `~/.aws/config` | cloudhop, only inside its block | One `sso-session` per portal, one profile per alias | No |
 | `~/.aws/sso/cache/<hash>.json` | cloudhop, like `aws sso login` | The SSO session: access and refresh tokens, expiry | Short-lived tokens, not access keys |
@@ -45,6 +48,20 @@ aliases:
 ```
 
 Move the folder with `CLOUDHOP_HOME`, or with `XDG_CONFIG_HOME` if you use it.
+
+## `.cloudhoprc`
+
+A folder file: with the shell integration, `cd` into the
+folder (or any folder inside it) switches the terminal to these aliases.
+
+```text
+# cloudhop: aliases for this folder
+aws: license-qa
+```
+
+One `cloud: alias` line per cloud, or just an alias name on its own. A file
+does nothing until you trust it with `cloudhop allow`; editing it needs a new
+`cloudhop allow`. See [Use an alias in your terminal](/cloudhop/guides/shell/#pin-an-alias-to-a-folder-cloudhoprc).
 
 ## The block in `~/.aws/config`
 

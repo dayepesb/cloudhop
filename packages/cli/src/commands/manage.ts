@@ -10,6 +10,7 @@ import {
 import { interactive, parseArgs } from '../flags';
 import { answer, bold, p, paint } from '../ui';
 import { regionValidator } from './add';
+import { activeAliases } from './use';
 
 function printReport(report: SyncReport): void {
   const changes = [
@@ -69,11 +70,15 @@ const printJson = (value: unknown) =>
  * Lists every source with its aliases underneath; `cloudhop ls <source>` shows
  * just one, and `--json` prints the same data for scripts and AI assistants.
  */
-export async function listCommand(app: CloudhopApp, args: string[] = []): Promise<void> {
+export async function listCommand(
+  app: CloudhopApp,
+  args: string[] = [],
+  context?: () => Promise<object>,
+): Promise<void> {
   const { positional, flags } = parseArgs(args);
   const sourceId = positional[0];
   if (flags.json) {
-    const overview = await app.overview();
+    const overview = { ...(await app.overview()), ...(await context?.()) };
     if (sourceId && !overview.sources.some((s) => s.id === sourceId)) {
       throw new CloudhopError('SOURCE_NOT_FOUND', `Source "${sourceId}" not found.`);
     }
@@ -280,7 +285,19 @@ export async function statusCommand(app: CloudhopApp, args: string[]): Promise<v
     return;
   }
   const overview = await app.overview();
-  if (flags.json) return printJson({ sources: overview.sources });
+  const inUse = activeAliases();
+  if (flags.json) return printJson({ inUse, sources: overview.sources });
+  // Where am I? Works in any terminal, with or without a prompt label.
+  const using = Object.entries(inUse).map(([cloud, alias]) => {
+    const status = overview.aliases.find((a) => a.name === alias);
+    const region = status?.region ? ` (${status.region})` : '';
+    return `${cloud} ${bold(paint(status?.prod ? 'red' : 'sky', alias as string))}${region}${status?.prod ? ` ${paint('red', 'PROD')}` : ''}`;
+  });
+  console.log(
+    using.length
+      ? `This terminal uses ${using.join(', ')}.`
+      : paint('dim', 'This terminal uses no alias (`cloudhop use <alias>` to pick one).'),
+  );
   if (overview.sources.length === 0) {
     console.log('Nothing here yet. Run `cloudhop setup` to get started.');
     return;

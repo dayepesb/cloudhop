@@ -76,8 +76,8 @@ See [Protect production](/cloudhop/guides/production/).
 
 ## `cloudhop use` says it needs the shell integration
 
-Run `cloudhop shell install` and open a new terminal. See
-[Shell integration](/cloudhop/guides/shell/).
+Run `cloudhop shell` and open a new terminal. See
+[Use an alias in your terminal](/cloudhop/guides/shell/).
 
 ## The console opens through the portal, or at the sign-in page
 

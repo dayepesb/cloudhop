@@ -21,8 +21,11 @@
 
 ```bash
 npm install --global cloudhop
-cloudhop setup               # add your SSO portal, sign in, pick accounts
-hop acme-prod s3 ls          # runs `aws s3 ls` as that account, role and region
+cloudhop add                 # sign in to your SSO portal, pick accounts, name aliases
+cloudhop shell               # set up your terminal once: `cloudhop use`, prompt label (Starship too)
+
+cloudhop use acme-prod       # switch this terminal to an account (acme-prod: your alias)
+aws s3 ls                    # plain aws, as acme-prod: signs you in when needed
 ```
 
 ## Why cloudhop
@@ -47,9 +50,25 @@ copying access keys, editing `~/.aws/config` by hand and running
 
 ## Everyday use
 
+Switch the terminal to an account and type the `aws` commands you know:
+
+```bash
+cloudhop use acme-dev            # this terminal is acme-dev; your prompt can show it
+aws ecs list-clusters            # expired session? the browser opens, then it runs
+cloudhop use acme-prod           # switch accounts (production asks before changes)
+cloudhop use acme-dev --save     # pin it to this project in .cloudhoprc: `cd` switches for you
+```
+
+Why `cloudhop shell`? A program can't change the terminal that started it;
+only the shell can, so it needs one line in your shell's startup file.
+Without it, `cloudhop use` opens a new shell, and everything below still works.
+
 | You want to | Run |
 | --- | --- |
-| Run any `aws` command as an alias | `hop acme-prod ec2 describe-instances` |
+| Switch this terminal to an alias | `cloudhop use acme-dev` |
+| Pin an alias to a project folder | `cloudhop use acme-dev --save` |
+| Trust a cloned project's `.cloudhoprc` | `cloudhop allow` |
+| Run one command in another account | `hop acme-prod ec2 describe-instances` |
 | Check who you are | `hop acme-prod` |
 | Use another region once | `hop acme-prod s3 ls --region eu-west-1` |
 | Give any tool temporary credentials | `cloudhop exec acme-prod -- terraform plan` |
@@ -63,7 +82,6 @@ copying access keys, editing `~/.aws/config` by hand and running
 | Pick the alias from a list | `hop` |
 | Mark an alias as production (asks before changes) | `cloudhop prod acme-prod` |
 | Run one command in many accounts | `cloudhop each 'acme-*' -- s3 ls` |
-| Use an alias in this shell (`aws`, Terraform...) | `cloudhop use acme-dev` |
 | Rename an alias | `cloudhop mv acme-dev dev` |
 | Share your setup with your team | `cloudhop team export` |
 | Do all of it from the browser | `cloudhop ui` |

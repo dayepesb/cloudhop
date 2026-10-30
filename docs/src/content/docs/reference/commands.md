@@ -67,7 +67,7 @@ Runs any command with the alias' temporary credentials in its environment
 | `cloudhop rm <name...> [--yes]` | Remove aliases, or sources with their aliases. Removing a source asks first; `--yes` skips it. |
 | `cloudhop rm --source <id>` | Remove a source when an alias has the same name. |
 | `cloudhop ls [source] [--json]` | List sources with their session state and aliases. `--json` prints the same data for scripts and AI assistants. |
-| `cloudhop status [alias] [--json]` | Whether an alias (or every source) can run now, renews silently, or needs a browser sign-in. Never signs in by itself. |
+| `cloudhop status [alias] [--json]` | Which alias this terminal uses, and whether an alias (or every source) can run now, renews silently, or needs a browser sign-in. Never signs in by itself. |
 
 ## Sessions
 
@@ -76,12 +76,22 @@ Runs any command with the alias' temporary credentials in its environment
 | `cloudhop login [source]` | Sign in again now and refresh the source's accounts and roles. |
 | `cloudhop sync [source]` | Refresh the accounts and roles of one or every source. |
 
-## Shell and team
+## Your terminal
 
 | Command | What it does |
 | --- | --- |
-| `cloudhop use [alias] \| --off` | Use an alias in the current shell (needs the shell integration). |
-| `cloudhop shell [zsh\|bash\|fish\|pwsh]` | Print the shell integration. `cloudhop shell install` adds it to your startup file. See [Shell integration](/cloudhop/guides/shell/). |
+| `cloudhop use [alias]` | Switch this terminal to an alias: then plain `aws`, Terraform and SDKs run as it. Without the shell integration it opens a new shell instead. See [Use an alias in your terminal](/cloudhop/guides/shell/). |
+| `cloudhop use <alias> --save` | Same, and pin it to this folder in a `.cloudhoprc` (trusted for you). |
+| `cloudhop use --off [cloud]` | Stop using the alias of every cloud, or of one (`aws`). |
+| `cloudhop allow [folder]` / `cloudhop deny [folder]` | Trust (or stop trusting) a folder's `.cloudhoprc`, so `cd` switches to its aliases. |
+| `cloudhop shell` | Set up your terminal once: adds one line to your shell's startup file and, if you use Starship, the alias segment to `starship.toml` (same as `cloudhop shell install`). |
+| `cloudhop shell zsh\|bash\|fish\|pwsh` | Print the integration script; that line runs it. |
+| `cloudhop shell starship` | Print prompt segments for [Starship](https://starship.rs). |
+
+## Team
+
+| Command | What it does |
+| --- | --- |
 | `cloudhop team export [--sources <list>] [--out <file>]` | Export portals and aliases for your team (no secrets). |
 | `cloudhop team import <file\|https URL> [--yes]` | Import a team setup. See [Share with your team](/cloudhop/guides/team/). |
 
@@ -121,3 +131,10 @@ Runs any command with the alias' temporary credentials in its environment
 | `CLOUDHOP_DEBUG=1` | Print full error details. |
 | `CLOUDHOP_CONFIRM_PROD=1` | A person approved this change on a production alias; don't ask (for scripts and AI assistants). |
 | `CLOUDHOP_NO_UPDATE_CHECK=1` | Don't check npm for a newer version (also off in CI and without a terminal). |
+| `CLOUDHOP_WRAP=0` | With the shell integration, keep `aws` as the plain AWS CLI even while an alias is in use. |
+| `CLOUDHOP_AUTO_USE=0` | With the shell integration, don't switch aliases from `.cloudhoprc` files on `cd`. |
+| `CLOUDHOP_PROMPT=0` | With the shell integration, don't add the alias label to the prompt. |
+
+`cloudhop use` sets `CLOUDHOP_AWS_ALIAS`, `CLOUDHOP_AWS_PROMPT` and
+`CLOUDHOP_AWS_PROD` for your prompt; see
+[Use an alias in your terminal](/cloudhop/guides/shell/#see-the-alias-in-your-prompt).

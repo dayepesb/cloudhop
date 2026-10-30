@@ -5,6 +5,11 @@ import { compareVersions } from '@cloudhop/core';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REGISTRY_URL = 'https://registry.npmjs.org/cloudhop/latest';
 
+/** A plain semver string: anything else from the network or the cache is ignored (it is printed to the terminal). */
+const VERSION = /^\d{1,6}\.\d{1,6}\.\d{1,6}(?:-[0-9A-Za-z.]{1,40})?$/;
+const validVersion = (value: unknown): string | undefined =>
+  typeof value === 'string' && VERSION.test(value) ? value : undefined;
+
 interface Cache {
   checkedAt: number;
   latest?: string;
@@ -27,9 +32,10 @@ export function startUpdateCheck(configDir: string, current: string): () => Prom
     try {
       cache = JSON.parse(await readFile(file, 'utf8')) as Cache;
     } catch {}
-    if (cache.latest && compareVersions(cache.latest, current) > 0) {
+    const cached = validVersion(cache.latest);
+    if (cached && compareVersions(cached, current) > 0) {
       process.stderr.write(
-        `\x1b[2mcloudhop ›\x1b[22m cloudhop ${cache.latest} is available (you have ${current}): npm i -g cloudhop\n`,
+        `\x1b[2mcloudhop ›\x1b[22m cloudhop ${cached} is available (you have ${current}): npm i -g cloudhop\n`,
       );
     }
     if (Date.now() - cache.checkedAt < DAY_MS) return;
@@ -38,10 +44,10 @@ export function startUpdateCheck(configDir: string, current: string): () => Prom
       signal: AbortSignal.timeout(1500),
     });
     if (!response.ok) return;
-    const { version } = (await response.json()) as { version?: string };
-    if (typeof version !== 'string') return;
+    const latest = validVersion(((await response.json()) as { version?: unknown }).version);
+    if (!latest) return;
     await mkdir(configDir, { recursive: true });
-    await writeFile(file, JSON.stringify({ checkedAt: Date.now(), latest: version }));
+    await writeFile(file, JSON.stringify({ checkedAt: Date.now(), latest }));
   })().catch(() => {});
 
   // Let the command finish first, then wait briefly for the check to save its result.

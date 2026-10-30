@@ -3,6 +3,7 @@ import type { CloudhopApp, DoctorEntry, ProviderId } from '@cloudhop/core';
 import { answer, p, printBanner, requireInteractive } from '../ui';
 import { addCommand } from './add';
 import { agentCommand } from './agent';
+import { shellCommand, shellIntegrationInstalled } from './shell';
 
 const UPCOMING = ['Azure', 'Google Cloud'];
 
@@ -78,6 +79,25 @@ export async function setupCommand(
   const addNow = answer(await p.confirm({ message: 'Add an account or SSO portal now?' }));
   if (addNow) await addCommand(app, { positional: [], flags: {} });
   else p.log.info('Run `cloudhop add` whenever you are ready.');
+
+  // `cloudhop use` and .cloudhoprc folders change the terminal you are in: that needs the integration.
+  if (!shellIntegrationInstalled()) {
+    p.note(
+      [
+        '`hop <alias>`, `each` and `console` work as they are. To also switch a terminal',
+        'to an alias (`cloudhop use`, then plain `aws`), switch on `cd` into a folder with',
+        'a .cloudhoprc, see the alias in your prompt (Starship too) and complete aliases',
+        'with <Tab>, your shell loads one line from its startup file. A program can only',
+        'change your terminal this way.',
+      ].join('\n'),
+      'Terminal',
+    );
+    const install = answer(
+      await p.confirm({ message: 'Set up your terminal for cloudhop?', initialValue: true }),
+    );
+    if (install) await shellCommand(['install', '--yes'], []);
+    else p.log.info('Later: `cloudhop shell install`. `cloudhop use` still works, in a new shell.');
+  }
 
   // Last, optional: teach the AI assistants found on this machine to use cloudhop.
   const detected = assistants.detect();

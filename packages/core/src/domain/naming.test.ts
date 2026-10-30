@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { looksLikeProduction, suggestAliases } from './naming';
+import { looksLikeProduction, suggestAliases, suggestAliasName } from './naming';
 
 const t = (id: string, accountName: string, roleName: string) => ({
   id,
@@ -42,5 +42,14 @@ describe('looksLikeProduction', () => {
     expect(looksLikeProduction('Globex_Contoso_Prod_01')).toBe(true);
     expect(looksLikeProduction('live-eu')).toBe(true);
     expect(looksLikeProduction('product-team', 'reproduce')).toBe(false);
+  });
+});
+
+describe('suggestAliasName', () => {
+  it('trims dashes at both ends, fast even on hostile input', () => {
+    expect(suggestAliasName('--Acme Prod--', 'AdminAccess')).toBe('acme-prod-admin');
+    const started = Date.now();
+    expect(suggestAliasName(`${'-'.repeat(50_000)}x${'-'.repeat(50_000)}`)).toBe('x');
+    expect(Date.now() - started).toBeLessThan(500);
   });
 });

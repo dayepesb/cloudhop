@@ -56,6 +56,8 @@ export interface CloudProvider {
   readonly sourceKinds: readonly SourceKind[];
   /** CLI arguments that print who you are, used by `hop <alias>` with no arguments. */
   readonly identityArgs: readonly string[];
+  /** Every variable `processEnv(_, 'cli')` may set: `cloudhop use --off` removes them from the shell. */
+  readonly shellVars: readonly string[];
 
   sessionState(source: Source): Promise<SessionState>;
   /** Renews the session without user interaction. Returns false when that isn't possible. */

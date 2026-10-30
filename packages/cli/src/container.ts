@@ -5,6 +5,7 @@ import {
   NodeBrowserOpener,
   NodeProcessRunner,
   SystemToolInstaller,
+  TrustedFolders,
   YamlConfigStore,
 } from '@cloudhop/adapters-node';
 import { AssistantsInstaller } from '@cloudhop/assistants';
@@ -47,4 +48,9 @@ export function createAssistants(
     runner: new NodeProcessRunner(),
     cloudhopVersion: version,
   });
+}
+
+/** The `.cloudhoprc` files the user trusted (`cloudhop allow`). */
+export function createTrustedFolders(env: NodeJS.ProcessEnv = process.env): TrustedFolders {
+  return new TrustedFolders(defaultConfigDir(env));
 }

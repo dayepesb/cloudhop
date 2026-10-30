@@ -15,7 +15,9 @@ Eliges tus asistentes, dónde instalarlo, y listo. Desde ahí, en cualquier chat
 nuevo, el asistente:
 
 1. **Te pregunta qué alias usar** antes de su primer comando en la nube, con
-   la lista real (alias, cuenta y rol, región). Nunca adivina.
+   la lista real (alias, cuenta y rol, región). Nunca adivina. Si el
+   proyecto tiene un [`.cloudhoprc`](/cloudhop/es/guides/shell/#fija-un-alias-a-una-carpeta-cloudhoprc),
+   te ofrece ese alias primero, y aun así pregunta.
 2. **Revisa la sesión primero.** Si tienes que iniciar sesión, te avisa que
    mires tu navegador en vez de fallar o reintentar en bucle.
 3. **Ejecuta los comandos al estilo cloudhop:** `hop <alias> ...` para el AWS
@@ -59,7 +61,7 @@ equipo recibe las mismas instrucciones al abrir el proyecto.
 
 | Herramienta | Qué hace | ¿Cambia algo? |
 | --- | --- | --- |
-| `list_aliases` | Fuentes y alias con el estado de su sesión | No |
+| `list_aliases` | Fuentes y alias con el estado de su sesión, más el `.cloudhoprc` del proyecto y el alias que usa tu terminal, como pistas | No |
 | `alias_status` | A qué cuenta apunta un alias y si puede ejecutarse ya | No |
 | `whoami` | Le pregunta a la nube quién es realmente el alias | No |
 | `open_console` | Abre la consola de AWS en tu navegador como el alias, con la sesión ya iniciada | No |

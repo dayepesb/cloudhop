@@ -60,3 +60,110 @@
 .site-title {
   letter-spacing: -0.02em;
 }
+
+/* ── Home page ─────────────────────────────────────────────────────────── */
+
+.ch-section {
+  margin-top: 3.5rem;
+}
+
+.ch-section > h2:first-child {
+  margin-bottom: 0.75rem;
+}
+
+/* Two columns side by side on wide screens, stacked on phones. */
+.ch-pair {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+@media (min-width: 50rem) {
+  .ch-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+}
+
+.ch-pair > * {
+  margin: 0 !important;
+}
+
+.ch-panel,
+.ch-feature {
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.75rem;
+  background: var(--sl-color-gray-6);
+  padding: 1.25rem 1.4rem;
+}
+
+.ch-panel > * + * {
+  margin-top: 0.75rem;
+}
+
+.ch-eyebrow {
+  margin: 0;
+  color: var(--sl-color-accent);
+  font-size: var(--sl-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ch-features {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 40rem) {
+  .ch-features {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .ch-features {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.ch-feature > * {
+  margin: 0;
+}
+
+.ch-feature p {
+  color: var(--sl-color-gray-2);
+  font-size: var(--sl-text-sm);
+  line-height: 1.55;
+}
+
+.ch-feature .ch-feature-title {
+  margin-bottom: 0.4rem;
+  color: var(--sl-color-white);
+  font-size: var(--sl-text-base);
+  font-weight: 700;
+}
+
+.ch-links {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+@media (min-width: 50rem) {
+  .ch-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.ch-links > * {
+  margin: 0 !important;
+}
+
+.ch-footnote {
+  margin-top: 2rem;
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-sm);
+}

@@ -1,5 +1,6 @@
 export * from './application/cloudhop-app';
 export * from './domain/errors';
+export * from './domain/folder';
 export * from './domain/model';
 export * from './domain/naming';
 export * from './domain/version';

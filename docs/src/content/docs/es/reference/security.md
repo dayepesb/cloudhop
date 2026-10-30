@@ -26,6 +26,21 @@ con PKCE y una redirección del navegador a `127.0.0.1`, o un código de
 dispositivo con `--device-code`. Tu contraseña y tu MFA solo van a las
 páginas de AWS.
 
+## Tu terminal y `.cloudhoprc`
+
+- `cloudhop use` solo pone en tu terminal un nombre de perfil y una región,
+  nunca credenciales, y borra las access keys que encuentre ahí.
+- Un `.cloudhoprc` se ignora hasta que lo apruebas con `cloudhop allow`.
+  cloudhop guarda una huella del contenido aprobado: si el archivo cambia
+  (por ejemplo, después de un `git pull`), vuelve a preguntar. Así un
+  repositorio que clonas no puede cambiar tu terminal a otra cuenta sin que
+  lo sepas.
+- Un `.cloudhoprc` solo puede nombrar alias que ya tienes. No puede agregar
+  portales, iniciar sesión ni ejecutar nada, y sus valores se validan como
+  nombres de alias antes de llegar a tu shell.
+- Entrar a una carpeta nunca abre tu navegador: lo hace el primer comando que
+  necesite una sesión.
+
 ## La interfaz web local
 
 `cloudhop ui` expone las mismas acciones que el CLI, así que está restringida

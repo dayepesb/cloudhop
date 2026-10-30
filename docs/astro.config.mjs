@@ -32,23 +32,32 @@ export default defineConfig({
           items: [{ slug: 'getting-started' }, { slug: 'concepts' }],
         },
         {
-          label: 'Guides',
-          translations: { es: 'Guías' },
+          label: 'Every day',
+          translations: { es: 'En el día a día' },
           items: [
+            { slug: 'guides/shell' },
             { slug: 'guides/hop-like-aws' },
-            { slug: 'guides/ai-assistants' },
             { slug: 'guides/console' },
             { slug: 'guides/production' },
             { slug: 'guides/many-accounts' },
-            { slug: 'guides/shell' },
-            { slug: 'guides/team' },
+            { slug: 'guides/other-tools' },
+          ],
+        },
+        {
+          label: 'Accounts and aliases',
+          translations: { es: 'Cuentas y alias' },
+          items: [
             { slug: 'guides/aws-sso' },
             { slug: 'guides/personal-accounts' },
             { slug: 'guides/aliases-and-regions' },
-            { slug: 'guides/other-tools' },
+            { slug: 'guides/team' },
             { slug: 'guides/web-ui' },
-            { slug: 'guides/scripting' },
           ],
+        },
+        {
+          label: 'AI and automation',
+          translations: { es: 'IA y automatización' },
+          items: [{ slug: 'guides/ai-assistants' }, { slug: 'guides/scripting' }],
         },
         {
           label: 'Reference',
@@ -63,6 +72,7 @@ export default defineConfig({
         {
           label: 'Project',
           translations: { es: 'Proyecto' },
+          collapsed: true,
           items: [{ slug: 'project/architecture' }, { slug: 'project/contributing' }],
         },
       ],

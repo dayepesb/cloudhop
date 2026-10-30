@@ -72,3 +72,17 @@ describe('console sign-in', () => {
     expect(hash.get('role_name')).toBe('Admin');
   });
 });
+
+describe('portalShortcutUrl trailing slashes', () => {
+  it('drops them, fast even on a very long run of slashes', () => {
+    const started = Date.now();
+    const url = portalShortcutUrl(
+      `https://acme.awsapps.com/start${'/'.repeat(50_000)}`,
+      '1',
+      'R',
+      'https://console.aws.amazon.com/',
+    );
+    expect(url.startsWith('https://acme.awsapps.com/start/#/console?')).toBe(true);
+    expect(Date.now() - started).toBeLessThan(500);
+  });
+});

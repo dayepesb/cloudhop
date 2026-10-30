@@ -23,6 +23,20 @@ cloudhop uses the same OAuth flows as the AWS CLI: authorization code with
 PKCE and a browser redirect to `127.0.0.1`, or a device code with
 `--device-code`. Your password and MFA only ever go to AWS's own pages.
 
+## Your terminal and `.cloudhoprc`
+
+- `cloudhop use` puts only a profile name and a region in your terminal,
+  never credentials, and clears access keys it finds there.
+- A `.cloudhoprc` is ignored until you approve it with `cloudhop allow`.
+  cloudhop stores a fingerprint of the approved content: if the file changes
+  (say, after a `git pull`), it asks again. So a repository you clone can't
+  switch your terminal to another account without you knowing.
+- A `.cloudhoprc` can only name aliases you already have. It can't add
+  portals, sign you in or run anything, and its values are validated as
+  alias names before they reach your shell.
+- Entering a folder never opens your browser: the first command that needs a
+  session does.
+
 ## The local web UI
 
 `cloudhop ui` exposes the same actions as the CLI, so it is locked to the

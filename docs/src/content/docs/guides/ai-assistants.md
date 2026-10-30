@@ -15,7 +15,9 @@ Pick your assistants, choose where to install, and you're done. From then on,
 in any new chat, the assistant:
 
 1. **Asks which alias to use** before its first cloud command, showing you the
-   real list (alias, account and role, region). It never guesses.
+   real list (alias, account and role, region). It never guesses. If the
+   project has a [`.cloudhoprc`](/cloudhop/guides/shell/#pin-an-alias-to-a-folder-cloudhoprc),
+   it offers that alias first, and still asks.
 2. **Checks the session first.** If you need to sign in, it tells you to look
    at your browser instead of failing or retrying in a loop.
 3. **Runs commands the cloudhop way:** `hop <alias> ...` for the AWS CLI and
@@ -57,7 +59,7 @@ your team who opens the project gets the same instructions.
 
 | Tool | What it does | Changes anything? |
 | --- | --- | --- |
-| `list_aliases` | Sources and aliases with their session state | No |
+| `list_aliases` | Sources and aliases with their session state, plus the project's `.cloudhoprc` and the alias your terminal uses, as hints | No |
 | `alias_status` | Which account an alias points to, and whether it can run now | No |
 | `whoami` | Asks the cloud who the alias really is | No |
 | `open_console` | Opens the AWS console in your browser as the alias, already signed in | No |

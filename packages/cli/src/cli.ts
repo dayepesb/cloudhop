@@ -19,10 +19,11 @@ import {
 } from './commands/manage';
 import { execCommand, proxyCommand } from './commands/run';
 import { doctorCommand, setupCommand } from './commands/setup';
-import { completeCommand, shellCommand, useCommand } from './commands/shell';
+import { completeCommand, shellCommand } from './commands/shell';
 import { teamCommand } from './commands/team';
 import { uiCommand } from './commands/ui';
-import { createApp, createAssistants } from './container';
+import { allowCommand, shellContext, useCommand } from './commands/use';
+import { createApp, createAssistants, createTrustedFolders } from './container';
 import { interactive, parseArgs } from './flags';
 import { pickAlias } from './picker';
 import { answer, notify, PromptCancelled, p } from './ui';
@@ -33,6 +34,11 @@ declare const __CLOUDHOP_VERSION__: string;
 const HELP = `cloudhop ${__CLOUDHOP_VERSION__}
 Hop between cloud accounts, roles and regions with one command.
 
+Quick start
+  cloudhop add                   Sign in to an SSO portal or personal account, name aliases
+  cloudhop shell                 Set up your terminal (once)
+  cloudhop use <alias>           Switch this terminal to an alias, then type plain aws ...
+
 Usage
   hop <alias> [args...]          Run the cloud CLI as <alias> (no args: who am I)
   hop                            Pick the alias from a list, then type the command
@@ -41,8 +47,12 @@ Usage
                                  Open the web console as <alias>, already signed in
   cloudhop each <selection...> [--source <s>] [--prod|--no-prod] [--yes] [--json] -- <args...>
                                  Run one command in many aliases (names, a,b lists, 'globex-*', /regex/)
-  cloudhop use [alias] | --off    Use an alias in this shell (aws, terraform... without hop)
-  cloudhop shell [install]       Shell integration: cloudhop use, tab completion, cloudhop_prompt
+  cloudhop use [alias] [--save]  Use an alias in this terminal: then plain aws, terraform... run as it
+                                 (--save: remember it for this folder in .cloudhoprc)
+  cloudhop use --off [cloud]     Stop using the alias of every cloud, or just one (aws)
+  cloudhop allow | deny [folder] Trust (or stop trusting) a folder's .cloudhoprc
+  cloudhop shell                 Set up your terminal once: cloudhop use, .cloudhoprc on cd, completion
+  cloudhop shell starship        Prompt segments for Starship (alias in use, PROD in red)
   cloudhop exec <alias> [--region <r>] -- <cmd...>
                                  Run any tool with the alias' temporary credentials
 
@@ -132,13 +142,22 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
   if (command === 'shell') {
-    await shellCommand(local);
+    const clis = app.availableProviders().map((p) => ({ command: p.cli.command, provider: p.id }));
+    await shellCommand(local, clis);
     return 0;
+  }
+  // What the shell integration evals (on `cd` too): fast, and nothing else on stdout.
+  if (command === 'use' && local.some((a) => a === '--emit' || a.startsWith('--emit='))) {
+    return useCommand(app, createTrustedFolders(), local);
   }
 
   if (command === 'mcp') {
     // stdout belongs to the MCP protocol from here on: nothing else may print to it.
-    await serveMcp({ app, version: __CLOUDHOP_VERSION__ });
+    await serveMcp({
+      app,
+      version: __CLOUDHOP_VERSION__,
+      context: () => shellContext(createTrustedFolders()),
+    });
     return 0;
   }
 
@@ -206,7 +225,7 @@ async function dispatch(
       return 0;
     case 'ls':
     case 'list':
-      await listCommand(app, local);
+      await listCommand(app, local, () => shellContext(createTrustedFolders()));
       return 0;
     case 'rm':
     case 'remove':
@@ -227,7 +246,10 @@ async function dispatch(
       await teamCommand(app, local);
       return 0;
     case 'use':
-      await useCommand(app, local);
+      return useCommand(app, createTrustedFolders(), local);
+    case 'allow':
+    case 'deny':
+      await allowCommand(app, createTrustedFolders(), local, command === 'allow');
       return 0;
     case 'each':
       return eachCommand(app, args);

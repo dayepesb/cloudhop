@@ -8,6 +8,12 @@ ejecuta `aws <args>` con el perfil y la región del alias, después de
 asegurarse de que tienes la sesión iniciada. Todo lo que haces con `aws` lo
 puedes hacer con `hop`.
 
+:::tip[¿Prefieres seguir escribiendo `aws`?]
+Cambia la terminal: `cloudhop use acme-prod` y luego `aws ...` normal.
+Consulta [Usa un alias en tu terminal](/cloudhop/es/guides/shell/). `hop` es
+práctico para comandos puntuales en otra cuenta sin cambiar la terminal.
+:::
+
 ## La regla
 
 Toma cualquier comando de `aws`, cambia `aws` por `hop <alias>` y quita

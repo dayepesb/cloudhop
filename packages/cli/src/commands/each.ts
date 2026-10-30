@@ -2,10 +2,20 @@ import { type AliasStatus, type CloudhopApp, CloudhopError } from '@cloudhop/cor
 import { interactive, parseArgs } from '../flags';
 import { answer, bold, p, paint } from '../ui';
 
+const MAX_PATTERN = 200;
+
 /** `'globex-*'` → /^globex-.*$/, `'/^creci-(qa|prod)$/i'` → as written, `acme-dev` → exact. */
 function matcher(selector: string): (name: string) => boolean {
   const regex = /^\/(.+)\/([a-z]*)$/.exec(selector);
   if (regex) {
+    // The user's own pattern, matched against their own alias names (63
+    // characters at most); the cap keeps a typo from hanging the command.
+    if (selector.length > MAX_PATTERN) {
+      throw new CloudhopError(
+        'INVALID_NAME',
+        `That regular expression is too long (max ${MAX_PATTERN}).`,
+      );
+    }
     try {
       const re = new RegExp(regex[1] as string, regex[2]);
       return (name) => re.test(name);

@@ -1,3 +1,4 @@
+export { findFolderFile, readFolderFile, TrustedFolders } from './folder-files';
 export { NodeBrowserOpener } from './node-browser-opener';
 export { NodeProcessRunner } from './node-process-runner';
 export { SystemToolInstaller } from './system-tool-installer';

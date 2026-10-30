@@ -1,11 +1,23 @@
-import { existsSync } from 'node:fs';
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { type CloudhopApp, CloudhopError, type ProcessEnv, RESERVED_NAMES } from '@cloudhop/core';
+import {
+  type CloudhopApp,
+  CloudhopError,
+  PROVIDER_IDS,
+  type ProcessEnv,
+  type ProviderId,
+  RESERVED_NAMES,
+} from '@cloudhop/core';
 import { interactive, parseArgs } from '../flags';
-import { pickAlias } from '../picker';
-import { answer, notify, p, paint } from '../ui';
+import { answer, p, paint } from '../ui';
+import {
+  addToStarshipConfig,
+  hasCloudhopStarship,
+  STARSHIP_SEGMENTS,
+  starshipModules,
+} from './starship';
 
 export type Shell = 'zsh' | 'bash' | 'fish' | 'pwsh';
 const SHELLS: readonly Shell[] = ['zsh', 'bash', 'fish', 'pwsh'];
@@ -14,17 +26,66 @@ const SHELLS: readonly Shell[] = ['zsh', 'bash', 'fish', 'pwsh'];
 const ALIAS_COMMANDS = 'use status console region mv prod rm exec';
 const SOURCE_COMMANDS = 'alias login sync ls';
 
-const SCRIPTS: Record<Shell, string> = {
-  zsh: `# cloudhop shell integration (zsh). Load it after compinit:  eval "$(cloudhop shell zsh)"
-cloudhop() {
-  if [ "$1" = "use" ]; then
-    local out; out="$(command cloudhop use --emit zsh "\${@:2}")" || return $?
-    eval "$out"
-  else
-    command cloudhop "$@"
-  fi
+/** A cloud CLI the integration wraps: with an alias in use, `aws ...` runs as `hop <alias> ...`. */
+export interface WrappedCli {
+  command: string;
+  provider: ProviderId;
 }
-_cloudhop_words() { command cloudhop __complete "$1" 2>/dev/null }
+
+const aliasVar = (provider: ProviderId) => `CLOUDHOP_${provider.toUpperCase()}_ALIAS`;
+const prodVar = (provider: ProviderId) => `CLOUDHOP_${provider.toUpperCase()}_PROD`;
+
+/** POSIX-ish shells share almost everything; only the `cd` hook and completion differ. */
+function posixScript(shell: 'zsh' | 'bash', clis: readonly WrappedCli[]): string {
+  const wrappers = clis
+    .map(
+      ({ command, provider }) => `${command}() {
+  case " $* " in *" --profile"*) command ${command} "$@"; return $?;; esac
+  if [ -n "$${aliasVar(provider)}" ] && [ "$CLOUDHOP_WRAP" != 0 ]; then
+    command cloudhop "$${aliasVar(provider)}" "$@"
+  else
+    command ${command} "$@"
+  fi
+}`,
+    )
+    .join('\n');
+  const prompt = PROVIDER_IDS.map(
+    (p) =>
+      `  [ -n "$${aliasVar(p)}" ] && out="$out\${out:+ }${p}:$${aliasVar(p)}\${${prodVar(p)}:+ PROD}"`,
+  ).join('\n');
+  const hook =
+    shell === 'zsh'
+      ? `autoload -Uz add-zsh-hook && add-zsh-hook chpwd _cloudhop_cd`
+      : `case ";$PROMPT_COMMAND;" in *";_cloudhop_cd;"*) ;; *) PROMPT_COMMAND="_cloudhop_cd;_cloudhop_show_prompt\${PROMPT_COMMAND:+;$PROMPT_COMMAND}";; esac`;
+  // Starship and oh-my-posh draw their own prompt: `cloudhop shell` configures Starship instead.
+  const promptHook =
+    shell === 'zsh'
+      ? `_cloudhop_show_prompt() {
+  [ "$CLOUDHOP_PROMPT" = 0 ] && return 0
+  case "$PROMPT$RPROMPT" in *starship*|*oh-my-posh*|*_cloudhop_rprompt*) return 0 ;; esac
+  setopt prompt_subst
+  RPROMPT='$(_cloudhop_rprompt)'"\${RPROMPT:+ $RPROMPT}"
+}
+# Sky for the alias, rose for production, like the CLI.
+_cloudhop_rprompt() {
+  local p; p="$(cloudhop_prompt)"; [ -n "$p" ] || return 0
+  case "$p" in *PROD*) printf '%%F{204}%s%%f' "$p" ;; *) printf '%%F{75}%s%%f' "$p" ;; esac
+}
+add-zsh-hook precmd _cloudhop_show_prompt`
+      : `# \\001 and \\002 tell readline the colors take no room, so long lines still wrap right.
+_cloudhop_ps1() {
+  local p c=75; p="$(cloudhop_prompt)"; [ -n "$p" ] || return 0
+  case "$p" in *PROD*) c=204 ;; esac
+  printf '\\001\\033[38;5;%sm\\002[%s]\\001\\033[0m\\002 ' "$c" "$p"
+}
+_cloudhop_show_prompt() {
+  [ "$CLOUDHOP_PROMPT" = 0 ] && return 0
+  case "$PS1" in *starship*|*oh-my-posh*|*_cloudhop_ps1*) return 0 ;; esac
+  PS1='$(_cloudhop_ps1)'"$PS1"
+}`;
+  const completion =
+    shell === 'zsh'
+      ? `_cloudhop_words() { command cloudhop __complete "$1" 2>/dev/null }
 _hop() { (( CURRENT == 2 )) && { local -a a; a=(\${(f)"$(_cloudhop_words aliases)"}); compadd -a a; } }
 _cloudhop() {
   local -a w
@@ -34,20 +95,8 @@ _cloudhop() {
   case " ${SOURCE_COMMANDS} " in *" $words[2] "*) w=(\${(f)"$(_cloudhop_words sources)"});; esac
   compadd -a w
 }
-(( $+functions[compdef] )) && { compdef _hop hop; compdef _cloudhop cloudhop; }
-# Add $(cloudhop_prompt) to your prompt to see the alias set with \`cloudhop use\`.
-cloudhop_prompt() { [ -n "$CLOUDHOP_ALIAS" ] && printf '☁ %s%s' "$CLOUDHOP_ALIAS" "\${CLOUDHOP_PROD:+ PROD}"; }
-`,
-  bash: `# cloudhop shell integration (bash):  eval "$(cloudhop shell bash)"
-cloudhop() {
-  if [ "$1" = "use" ]; then
-    local out; out="$(command cloudhop use --emit bash "\${@:2}")" || return $?
-    eval "$out"
-  else
-    command cloudhop "$@"
-  fi
-}
-_cloudhop_complete() {
+(( $+functions[compdef] )) && { compdef _hop hop; compdef _cloudhop cloudhop; }`
+      : `_cloudhop_complete() {
   local cur=\${COMP_WORDS[COMP_CWORD]} cmd=\${COMP_WORDS[0]##*/} kind=""
   if [ "$cmd" = hop ]; then [ "$COMP_CWORD" -eq 1 ] && kind=aliases
   elif [ "$COMP_CWORD" -eq 1 ]; then kind=commands
@@ -57,36 +106,192 @@ _cloudhop_complete() {
   fi
   [ -n "$kind" ] && COMPREPLY=($(compgen -W "$(command cloudhop __complete $kind 2>/dev/null)" -- "$cur"))
 }
-complete -o default -F _cloudhop_complete hop cloudhop
-# Add $(cloudhop_prompt) to PS1 to see the alias set with \`cloudhop use\`.
-cloudhop_prompt() { [ -n "$CLOUDHOP_ALIAS" ] && printf '☁ %s%s' "$CLOUDHOP_ALIAS" "\${CLOUDHOP_PROD:+ PROD}"; }
-`,
-  fish: `# cloudhop shell integration (fish):  cloudhop shell fish | source
-function cloudhop
-  if test "$argv[1]" = use
-    set -l out (command cloudhop use --emit fish $argv[2..-1]); or return $status
-    printf '%s\\n' $out | source
+complete -o default -F _cloudhop_complete hop cloudhop`;
+  return `# cloudhop shell integration (${shell}). Load it${shell === 'zsh' ? ' after compinit' : ''}:  ${LOAD_LINE[shell]}
+# - \`cloudhop use <alias>\` switches this shell; \`cloudhop use --off\` goes back.
+# - A folder with a trusted .cloudhoprc switches on cd (off: CLOUDHOP_AUTO_USE=0).
+# - With an alias in use, \`${clis.map((c) => c.command).join('`, `') || 'aws'}\` signs in when needed and asks before changing production (off: CLOUDHOP_WRAP=0).
+# - Your prompt shows the alias in use (off: CLOUDHOP_PROMPT=0).
+cloudhop() {
+  case "$1" in
+    use)
+      local out; out="$(command cloudhop use --emit ${shell} "\${@:2}")" || return $?
+      eval "$out"; _cloudhop_rc_seen=\${CLOUDHOP_RC:-$_cloudhop_rc_seen} ;;
+    allow|deny) command cloudhop "$@" || return $?; _cloudhop_rc_seen=-; _cloudhop_cd ;;
+    *) command cloudhop "$@" ;;
+  esac
+}
+_cloudhop_cd() {
+  [ "$CLOUDHOP_AUTO_USE" = 0 ] && return
+  [ "$PWD" = "$_cloudhop_pwd" ] && [ "$_cloudhop_rc_seen" != - ] && return
+  _cloudhop_pwd=$PWD
+  local dir=$PWD rc=
+  while :; do
+    if [ -f "$dir/.cloudhoprc" ]; then rc="$dir/.cloudhoprc"; break; fi
+    { [ -z "$dir" ] || [ "$dir" = / ]; } && break
+    dir="\${dir%/*}"
+  done
+  [ "$rc" = "$_cloudhop_rc_seen" ] && return
+  _cloudhop_rc_seen=$rc
+  local out
+  if [ -n "$rc" ]; then out="$(command cloudhop use --emit ${shell} --from "$rc")"
+  elif [ -n "$CLOUDHOP_RC" ]; then out="$(command cloudhop use --emit ${shell} --leave)"
+  else return 0; fi
+  eval "$out"
+}
+${hook}
+_cloudhop_cd
+${wrappers}
+${completion}
+# The aliases in use, e.g. "aws:acme-dev". Shown in your prompt by itself
+# (off: CLOUDHOP_PROMPT=0); Starship gets its own segments from \`cloudhop shell\`.
+cloudhop_prompt() {
+  local out=
+${prompt}
+  [ -n "$out" ] && printf '%s' "$out"
+}
+${promptHook}
+`;
+}
+
+function fishScript(clis: readonly WrappedCli[]): string {
+  const wrappers = clis
+    .map(
+      ({ command, provider }) => `function ${command} --wraps ${command}
+  if test -n "$${aliasVar(provider)}" -a "$CLOUDHOP_WRAP" != 0; and not string match -q -- '--profile*' $argv
+    command cloudhop $${aliasVar(provider)} $argv
   else
-    command cloudhop $argv
+    command ${command} $argv
+  end
+end`,
+    )
+    .join('\n');
+  const prompt = PROVIDER_IDS.map(
+    (p) =>
+      `  test -n "$${aliasVar(p)}"; and set out $out "${p}:$${aliasVar(p)}"(test -n "$${prodVar(p)}"; and echo ' PROD')`,
+  ).join('\n');
+  return `# cloudhop shell integration (fish):  ${LOAD_LINE.fish}
+# - \`cloudhop use <alias>\` switches this shell; \`cloudhop use --off\` goes back.
+# - A folder with a trusted .cloudhoprc switches on cd (off: set -gx CLOUDHOP_AUTO_USE 0).
+# - With an alias in use, the cloud CLI signs in when needed and asks before changing production (off: set -gx CLOUDHOP_WRAP 0).
+function cloudhop
+  switch "$argv[1]"
+    case use
+      set -l out (command cloudhop use --emit fish $argv[2..-1]); or return $status
+      printf '%s\\n' $out | source
+      set -q CLOUDHOP_RC; and set -g _cloudhop_rc_seen $CLOUDHOP_RC
+    case allow deny
+      command cloudhop $argv; or return $status
+      set -g _cloudhop_rc_seen -
+      _cloudhop_cd
+    case '*'
+      command cloudhop $argv
   end
 end
+function _cloudhop_cd --on-variable PWD
+  test "$CLOUDHOP_AUTO_USE" = 0; and return
+  set -l dir $PWD
+  set -l rc ''
+  while true
+    if test -f "$dir/.cloudhoprc"; set rc "$dir/.cloudhoprc"; break; end
+    if test -z "$dir" -o "$dir" = /; break; end
+    set dir (string replace -r '/[^/]*$' '' -- $dir)
+  end
+  test "$rc" = "$_cloudhop_rc_seen"; and return
+  set -g _cloudhop_rc_seen $rc
+  if test -n "$rc"
+    command cloudhop use --emit fish --from $rc | source
+  else if test -n "$CLOUDHOP_RC"
+    command cloudhop use --emit fish --leave | source
+  end
+end
+_cloudhop_cd
+${wrappers}
 complete -c hop -f -n 'test (count (commandline -opc)) -eq 1' -a '(command cloudhop __complete aliases 2>/dev/null)'
 complete -c cloudhop -f -n 'test (count (commandline -opc)) -eq 1' -a '(command cloudhop __complete commands 2>/dev/null)'
 complete -c cloudhop -f -n '__fish_seen_subcommand_from ${ALIAS_COMMANDS}; and test (count (commandline -opc)) -eq 2' -a '(command cloudhop __complete aliases 2>/dev/null)'
 complete -c cloudhop -f -n '__fish_seen_subcommand_from ${SOURCE_COMMANDS}; and test (count (commandline -opc)) -eq 2' -a '(command cloudhop __complete sources 2>/dev/null)'
-# Call cloudhop_prompt from fish_prompt to see the alias set with \`cloudhop use\`.
+# The aliases in use, e.g. "aws:acme-dev", at the right of the prompt unless
+# something else (like Starship) draws it (off: set -gx CLOUDHOP_PROMPT 0).
 function cloudhop_prompt
-  test -n "$CLOUDHOP_ALIAS"; and printf '☁ %s%s' $CLOUDHOP_ALIAS (test -n "$CLOUDHOP_PROD"; and echo ' PROD')
+  set -l out
+${prompt}
+  test -n "$out"; and printf '%s' (string join ' ' $out)
 end
-`,
-  pwsh: `# cloudhop shell integration (PowerShell):  cloudhop shell pwsh | Out-String | Invoke-Expression
+if not functions -q fish_right_prompt
+  function fish_right_prompt
+    test "$CLOUDHOP_PROMPT" = 0; and return
+    set -l label (cloudhop_prompt)
+    test -n "$label"; or return
+    if string match -q '*PROD*' -- $label; set_color fb7185; else; set_color 3bb8f5; end
+    printf '%s' $label; set_color normal
+  end
+end
+`;
+}
+
+function pwshScript(clis: readonly WrappedCli[]): string {
+  const wrappers = clis
+    .map(
+      ({
+        command,
+        provider,
+      }) => `$script:CloudhopCli_${provider} = (Get-Command ${command} -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+function ${command} {
+  if ($env:${aliasVar(provider)} -and $env:CLOUDHOP_WRAP -ne '0' -and -not ($args -like '--profile*')) { & $script:CloudhopExe $env:${aliasVar(provider)} @args }
+  elseif ($script:CloudhopCli_${provider}) { & $script:CloudhopCli_${provider} @args }
+  else { Write-Error '${command}: command not found' }
+}`,
+    )
+    .join('\n');
+  const prompt = PROVIDER_IDS.map(
+    (p) =>
+      `  if ($env:${aliasVar(p)}) { $out += "${p}:$env:${aliasVar(p)}$(if ($env:${prodVar(p)}) { ' PROD' })" }`,
+  ).join('\n');
+  return `# cloudhop shell integration (PowerShell):  ${LOAD_LINE.pwsh}
+# - \`cloudhop use <alias>\` switches this shell; \`cloudhop use --off\` goes back.
+# - A folder with a trusted .cloudhoprc switches on cd (off: $env:CLOUDHOP_AUTO_USE = '0').
+# - With an alias in use, the cloud CLI signs in when needed and asks before changing production (off: $env:CLOUDHOP_WRAP = '0').
 $script:CloudhopExe = (Get-Command cloudhop -CommandType Application, ExternalScript | Select-Object -First 1).Source
 function cloudhop {
   if ($args.Count -gt 0 -and $args[0] -eq 'use') {
     $out = & $script:CloudhopExe use --emit pwsh @($args | Select-Object -Skip 1)
-    if ($LASTEXITCODE -eq 0) { $out | Out-String | Invoke-Expression }
+    if ($LASTEXITCODE -eq 0) { $out | Out-String | Invoke-Expression; if ($env:CLOUDHOP_RC) { $script:CloudhopRcSeen = $env:CLOUDHOP_RC } }
+  } elseif ($args.Count -gt 0 -and $args[0] -in 'allow', 'deny') {
+    & $script:CloudhopExe @args
+    if ($LASTEXITCODE -eq 0) { $script:CloudhopRcSeen = '-'; $script:CloudhopPwd = ''; _CloudhopCd }
   } else { & $script:CloudhopExe @args }
 }
+function _CloudhopCd {
+  if ($env:CLOUDHOP_AUTO_USE -eq '0' -or $PWD.ProviderPath -eq $script:CloudhopPwd) { return }
+  $script:CloudhopPwd = $PWD.ProviderPath
+  $dir = $PWD.ProviderPath; $rc = ''
+  while ($dir) {
+    $file = Join-Path $dir '.cloudhoprc'
+    if (Test-Path -LiteralPath $file -PathType Leaf) { $rc = $file; break }
+    $dir = Split-Path -Parent $dir
+  }
+  if ($rc -eq $script:CloudhopRcSeen) { return }
+  $script:CloudhopRcSeen = $rc
+  $out = if ($rc) { & $script:CloudhopExe use --emit pwsh --from $rc } elseif ($env:CLOUDHOP_RC) { & $script:CloudhopExe use --emit pwsh --leave }
+  if ($out) { $out | Out-String | Invoke-Expression }
+}
+$script:CloudhopPrompt = $function:prompt
+function prompt {
+  _CloudhopCd
+  $out = & $script:CloudhopPrompt
+  # The alias in use before your prompt, unless Starship draws it (off: $env:CLOUDHOP_PROMPT = '0').
+  if ($env:CLOUDHOP_PROMPT -ne '0' -and "$script:CloudhopPrompt" -notmatch 'starship|oh-my-posh') {
+    $label = cloudhop_prompt
+    if ($label) {
+      if (-not $Host.UI.SupportsVirtualTerminal) { return "[$label] $out" }
+      $color = if ($label -match 'PROD') { 204 } else { 75 }
+      return "$([char]27)[38;5;$($color)m[$label]$([char]27)[0m $out"
+    }
+  }
+  $out
+}
+${wrappers}
 Register-ArgumentCompleter -Native -CommandName hop, cloudhop -ScriptBlock {
   param($word, $ast)
   $n = $ast.CommandElements.Count - [int]($word -eq '')
@@ -96,9 +301,31 @@ Register-ArgumentCompleter -Native -CommandName hop, cloudhop -ScriptBlock {
           elseif ($n -eq 2 -and ' ${SOURCE_COMMANDS} ' -match " $($ast.CommandElements[1].Value) ") { 'sources' }
   if ($kind) { & $script:CloudhopExe __complete $kind | Where-Object { $_ -like "$word*" } }
 }
-function cloudhop_prompt { if ($env:CLOUDHOP_ALIAS) { "☁ $env:CLOUDHOP_ALIAS$(if ($env:CLOUDHOP_PROD) { ' PROD' })" } }
-`,
-};
+function cloudhop_prompt {
+  $out = @()
+${prompt}
+  $out -join ' '
+}
+`;
+}
+
+/** The integration script for a shell, wrapping the CLIs of the clouds cloudhop supports. */
+export function shellScript(shell: Shell, clis: readonly WrappedCli[]): string {
+  if (shell === 'fish') return fishScript(clis);
+  if (shell === 'pwsh') return pwshScript(clis);
+  return posixScript(shell, clis);
+}
+
+/** What `cloudhop shell starship` prints, for people who edit their config by hand. */
+export function starshipSnippet(): string {
+  return `# cloudhop: the alias each cloud uses in this shell (\`cloudhop use\`, .cloudhoprc).
+# \`cloudhop shell\` adds this for you. By hand: append it to starship.toml and, if
+# your config has a top-level \`format\`, add this where you want the segments:
+#   ${STARSHIP_SEGMENTS}
+
+${starshipModules()}
+`;
+}
 
 const quote = (shell: Shell, value: string) =>
   shell === 'pwsh' ? `'${value.replace(/'/g, "''")}'` : `'${value.replace(/'/g, "'\\''")}'`;
@@ -119,13 +346,13 @@ export function shellExports(shell: Shell, env: ProcessEnv): string {
     .join('\n');
 }
 
-function detectShell(): Shell {
+export function detectShell(): Shell {
   if (process.platform === 'win32') return 'pwsh';
   const name = (process.env.SHELL ?? '').split('/').pop();
   return SHELLS.includes(name as Shell) ? (name as Shell) : 'bash';
 }
 
-function parseShell(value: string | undefined): Shell {
+export function parseShell(value: string | undefined): Shell {
   if (!value) return detectShell();
   const shell = value === 'powershell' ? 'pwsh' : value;
   if (!SHELLS.includes(shell as Shell)) {
@@ -147,100 +374,125 @@ const RC_FILES: Record<Shell, (home: string) => string> = {
       ? join(home, 'Documents', 'PowerShell', 'Microsoft.PowerShell_profile.ps1')
       : join(home, '.config', 'powershell', 'Microsoft.PowerShell_profile.ps1'),
 };
-const LOAD_LINE: Record<Shell, string> = {
+export const LOAD_LINE: Record<Shell, string> = {
   zsh: 'eval "$(cloudhop shell zsh)"',
   bash: 'eval "$(cloudhop shell bash)"',
   fish: 'cloudhop shell fish | source',
   pwsh: 'cloudhop shell pwsh | Out-String | Invoke-Expression',
 };
 
+/** True when the user's shell loads the integration (and Starship, if used, shows the alias). */
+export function shellIntegrationInstalled(): boolean {
+  const shell = detectShell();
+  const read = (file: string) => {
+    try {
+      return readFileSync(file, 'utf8');
+    } catch {
+      return undefined;
+    }
+  };
+  const rc = read(RC_FILES[shell](homedir())) ?? '';
+  if (!rc.includes(LOAD_LINE[shell])) return false;
+  const starship = read(starshipFile());
+  if (starship === undefined) return !rc.includes('starship init');
+  return hasCloudhopStarship(starship);
+}
+
+const starshipFile = () =>
+  process.env.STARSHIP_CONFIG || join(homedir(), '.config', 'starship.toml');
+
 /**
  * `cloudhop shell [zsh|bash|fish|pwsh]` prints the integration script;
- * `cloudhop shell install [shell]` adds the line that loads it to the shell's
- * startup file (after asking).
+ * `cloudhop shell` in a terminal, or `cloudhop shell install [shell]`, adds the line that loads it to the shell's
+ * startup file (after asking); `cloudhop shell starship` prints the prompt
+ * segments for Starship.
  */
-export async function shellCommand(args: string[]): Promise<void> {
+export async function shellCommand(args: string[], clis: readonly WrappedCli[]): Promise<void> {
   const { positional, flags } = parseArgs(args);
-  if (positional[0] !== 'install') {
-    process.stdout.write(SCRIPTS[parseShell(positional[0])]);
+  if (positional[0] === 'starship') {
+    process.stdout.write(starshipSnippet());
+    return;
+  }
+  // `cloudhop shell` typed in a terminal means "set it up"; the startup line
+  // (`eval "$(cloudhop shell zsh)"`) names the shell and captures the output.
+  const setUp = positional[0] === 'install' || (!positional[0] && process.stdout.isTTY);
+  if (!setUp) {
+    process.stdout.write(shellScript(parseShell(positional[0]), clis));
     return;
   }
   const shell = parseShell(positional[1]);
   const file = RC_FILES[shell](homedir());
   const line = LOAD_LINE[shell];
-  const current = existsSync(file) ? await readFile(file, 'utf8') : '';
-  if (current.includes(line)) {
-    console.log(`Already set up in ${file.replace(homedir(), '~')}.`);
+  const current = (await readIfExists(file)) ?? '';
+  const starship = await starshipConfig(current);
+  const needsLine = !current.includes(line);
+  const needsStarship = starship !== undefined && !hasCloudhopStarship(starship.text);
+  const rcName = file.replace(homedir(), '~');
+
+  if (!needsLine && !needsStarship) {
+    console.log(`Already set up in ${rcName}${starship ? ' and your Starship prompt' : ''}.`);
     return;
   }
+  const changes = [
+    needsLine &&
+      `add one line to ${rcName}: \`cloudhop use\`, .cloudhoprc folders, the alias in your prompt`,
+    needsStarship &&
+      `show the alias in your Starship prompt (${starship.file.replace(homedir(), '~')}, keeping a backup)`,
+  ].filter(Boolean);
   if (!flags.yes) {
     if (!interactive())
       throw new CloudhopError(
         'NOT_INTERACTIVE',
-        `Add this line to ${file} yourself, or rerun with --yes:\n  ${line}`,
+        `Rerun with --yes to ${changes.join(' and ')}.${needsLine ? `\nOr add this line to ${file} yourself:\n  ${line}` : ''}`,
       );
-    const ok = answer(
-      await p.confirm({
-        message: `Add cloudhop to ${file.replace(homedir(), '~')}?`,
-        initialValue: true,
-      }),
-    );
+    console.log(`cloudhop will:\n${changes.map((c) => `  - ${c}`).join('\n')}`);
+    const ok = answer(await p.confirm({ message: 'Set up your terminal?', initialValue: true }));
     if (!ok) return;
   }
-  await mkdir(dirname(file), { recursive: true });
-  const note = shell === 'zsh' ? '  # after compinit' : '';
-  await appendFile(
-    file,
-    `${current && !current.endsWith('\n') ? '\n' : ''}\n# cloudhop: \`cloudhop use\`, tab completion and cloudhop_prompt${note}\n${line}\n`,
-  );
+  if (needsLine) {
+    await mkdir(dirname(file), { recursive: true });
+    const note = shell === 'zsh' ? '  # after compinit' : '';
+    await appendFile(
+      file,
+      `${current && !current.endsWith('\n') ? '\n' : ''}\n# cloudhop: \`cloudhop use\`, .cloudhoprc folders, tab completion, prompt${note}\n${line}\n`,
+    );
+    console.log(`${paint('green', '✔')} Added to ${rcName}.`);
+  }
+  if (needsStarship) {
+    await mkdir(dirname(starship.file), { recursive: true });
+    // The backup is what we read, so it matches what we changed.
+    if (starship.exists) await writeFile(`${starship.file}.cloudhop-backup`, starship.text);
+    await writeFile(starship.file, addToStarshipConfig(starship.text));
+    console.log(
+      `${paint('green', '✔')} Your Starship prompt shows the alias in use (backup: ${starship.file.replace(homedir(), '~')}.cloudhop-backup).`,
+    );
+  }
   console.log(
-    `${paint('green', '✔')} Added to ${file.replace(homedir(), '~')}. Open a new terminal to use it.`,
+    `Open a new terminal (or run ${paint('sky', shell === 'pwsh' ? '. $PROFILE' : `exec ${shell}`)}), then:`,
   );
+  console.log(`  ${paint('sky', 'cloudhop use <alias>')}   switch this terminal to an account`);
+  console.log(`  ${paint('sky', 'aws s3 ls')}              plain aws commands, as that alias`);
 }
 
-/**
- * `cloudhop use <alias> | --off`: makes the current shell use an alias, so
- * `aws`, Terraform and SDKs work without `hop`. Needs the shell integration,
- * which evals what this prints with `--emit <shell>`.
- */
-export async function useCommand(app: CloudhopApp, args: string[]): Promise<void> {
-  const { positional, flags } = parseArgs(args);
-  const shell = flags.emit ? parseShell(flags.emit) : undefined;
-  if (!shell) {
-    throw new CloudhopError(
-      'NOT_INTERACTIVE',
-      '`cloudhop use` needs the shell integration to change your current shell.',
-      `Set it up once with \`cloudhop shell install\` (or add ${LOAD_LINE[detectShell()]} to your shell's startup file), then open a new terminal.`,
-    );
+/** The Starship config to extend, when this shell uses Starship. */
+async function starshipConfig(
+  rc: string,
+): Promise<{ file: string; text: string; exists: boolean } | undefined> {
+  const file = starshipFile();
+  const text = await readIfExists(file);
+  if (text === undefined && !rc.includes('starship init') && !process.env.STARSHIP_SHELL) {
+    return undefined;
   }
-  const clear = {
-    AWS_ACCESS_KEY_ID: undefined,
-    AWS_SECRET_ACCESS_KEY: undefined,
-    AWS_SESSION_TOKEN: undefined,
-  };
-  if (flags.off) {
-    process.stdout.write(
-      `${shellExports(shell, { ...clear, AWS_PROFILE: undefined, AWS_REGION: undefined, AWS_DEFAULT_REGION: undefined, CLOUDHOP_ALIAS: undefined, CLOUDHOP_PROD: undefined })}\n`,
-    );
-    notify('No alias in this shell anymore.');
-    return;
-  }
-  const alias = positional[0] ?? (await pickAlias(app, 'Use which alias in this shell?'));
-  const env = await app.envForAlias(alias, 'cli');
-  const status = await app.aliasStatus(alias);
-  process.stdout.write(
-    `${shellExports(shell, { ...clear, ...env, CLOUDHOP_ALIAS: alias, CLOUDHOP_PROD: status.prod ? '1' : undefined })}\n`,
-  );
-  notify(
-    `This shell now uses ${alias} (${status.label ?? status.target}, ${status.region ?? 'no region'}).`,
-  );
-  if (status.prod) {
-    notify(
-      paint(
-        'red',
-        `${alias} is production. Plain \`aws\` commands are not protected here: use \`hop ${alias}\` to be asked before changes.`,
-      ),
-    );
+  return { file, text: text ?? '', exists: text !== undefined };
+}
+
+/** The file's text, or undefined when it doesn't exist (read once: no check-then-read race). */
+async function readIfExists(file: string): Promise<string | undefined> {
+  try {
+    return await readFile(file, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
   }
 }
 

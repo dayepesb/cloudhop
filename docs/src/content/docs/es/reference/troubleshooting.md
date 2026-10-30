@@ -81,8 +81,8 @@ niega. Si una persona aprobó ese comando exacto, ejecútalo con
 
 ## `cloudhop use` dice que necesita la integración con la shell
 
-Ejecuta `cloudhop shell install` y abre una terminal nueva. Consulta
-[Integración con la shell](/cloudhop/es/guides/shell/).
+Ejecuta `cloudhop shell` y abre una terminal nueva. Consulta
+[Usa un alias en tu terminal](/cloudhop/es/guides/shell/).
 
 ## La consola se abre a través del portal, o en la página de inicio de sesión
 

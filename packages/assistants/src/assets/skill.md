@@ -10,6 +10,56 @@ example `acme-dev`) points to one account, one role and one region. cloudhop
 signs the user in through their browser only when a session has expired. There
 are no access keys: never ask for, create, print or store credentials.
 
+## How the user works (to guide them)
+
+When the user asks how to set up or use cloudhop themselves, describe this
+path; these are commands for **them** to run in their own terminal:
+
+1. **Once**: `npm install --global cloudhop`, then `cloudhop add` (signs in
+   to an SSO portal or personal account and names each account/role as an
+   alias), then `cloudhop shell` (adds one line to their shell's startup
+   file and, with Starship, the alias segment to `starship.toml`; they open
+   a new terminal afterwards). `cloudhop setup` does all of it in one
+   guided run. Works in zsh, bash (Git Bash too), fish and PowerShell;
+   in Windows `cmd.exe`, `cloudhop use` opens a new `cmd` with the alias in
+   its prompt.
+2. **Every day**: `cloudhop use <alias>` switches that terminal to an
+   account; after that they type plain `aws ...`, Terraform
+   or SDK commands. `cloudhop use <other>` switches accounts and
+   `cloudhop use --off` goes back. Expired sessions sign in by themselves,
+   and on production aliases `aws` asks before changes. Their prompt shows
+   the alias in use, in red for production, and `cloudhop status` tells
+   them which alias their terminal uses.
+3. **Per project**: `cloudhop use <alias> --save` writes a `.cloudhoprc` in
+   the folder, so `cd` into it switches the terminal; teammates run
+   `cloudhop allow` once after cloning (and again after the file changes);
+   `cloudhop deny` withdraws it. A file does nothing until it is trusted.
+4. **One-offs**: `hop <alias> <aws args>` runs one command in another
+   account without switching; `cloudhop each` runs it in many;
+   `cloudhop console <alias> [service]` opens the web console signed in.
+
+Why `cloudhop shell` is needed: a program can't change the environment of
+the terminal that started it, only the shell can.
+Without it, `cloudhop use` opens a new shell instead; `hop` always works.
+
+Switches, for the user: `CLOUDHOP_WRAP=0` keeps `aws` as the plain AWS
+CLI, `CLOUDHOP_AUTO_USE=0` ignores `.cloudhoprc` files, `CLOUDHOP_PROMPT=0`
+hides the prompt label. `cloudhop shell starship` prints the Starship
+segment for people who place it by hand.
+
+When their terminal doesn't do what they expect:
+
+| They say | Suggest |
+| --- | --- |
+| "Which account am I in?" | `cloudhop status` (first line) |
+| `cloudhop use` opened a new shell / says it needs the integration | `cloudhop shell`, then a new terminal |
+| No label in the prompt | Run `cloudhop shell` again (it adds what's missing), then a new terminal |
+| `cd` into the project doesn't switch | `cloudhop allow` in that folder; check the alias name exists (`cloudhop ls`) |
+| `aws` runs in the wrong account | `cloudhop status`, then `cloudhop use <alias>` or `cloudhop use --off` |
+
+That is the user's way. **You** work differently, below: you always name the
+alias with `hop <alias>`, because your shell doesn't have their integration.
+
 ## 1. Pick the alias with the user, every time
 
 Before the first cloud operation in a conversation:
@@ -19,6 +69,12 @@ Before the first cloud operation in a conversation:
 2. Show the user the options (alias, account / role, region) and **ask which
    one to use**. Don't guess, even if one name looks right, and don't pick
    one just because there is only one: confirm it.
+   - The listing may carry hints: `folder.aliases` is what this project pins
+     in its `.cloudhoprc` (`folder.trusted` says whether the user approved
+     it), and `inUse` is what the user switched their terminal to with
+     `cloudhop use` (`cloudhop status --json` has `inUse` too). Offer that
+     alias first ("This project uses
+     `license-qa`, use it?"), but still wait for the answer.
 3. Use that alias for the rest of the conversation. Ask again if the user
    moves to another environment, account or task.
 
@@ -49,11 +105,16 @@ Don't start several cloud commands in parallel while a sign-in is pending.
 - **The AWS web console**: `cloudhop console <alias> [service]` (or the
   `open_console` tool) opens it in the user's browser, already signed in.
   Never try to print or fetch its URL.
-- **Always name the alias.** Never run the interactive forms meant for a
-  person at a terminal: `hop` or `hop -` without an alias, `cloudhop console`
-  without an alias, `cloudhop use` (it only changes an interactive shell),
-  `cloudhop setup`, or `cloudhop add`/`alias` without flags. Nobody can answer
-  their prompts in your terminal.
+- **Always name the alias**, even when the project has a `.cloudhoprc` or
+  the user's terminal uses an alias: your shell doesn't have the user's
+  cloudhop integration, so a plain `aws` may run as anything. Use
+  `hop <alias> ...`, never bare `aws`.
+- Never run the interactive forms meant for a person at a terminal: `hop` or
+  `hop -` without an alias, `cloudhop console` without an alias,
+  `cloudhop use` (it changes or opens an interactive shell), `cloudhop
+  allow`/`deny` (trusting a folder is the user's decision), `cloudhop setup`,
+  or `cloudhop add`/`alias` without flags. Nobody can answer their prompts in
+  your terminal.
 - **Other tools** (Terraform, CDK, SDK scripts):
   `cloudhop exec <alias> -- <command>`, e.g.
   `cloudhop exec acme-dev -- terraform plan`.
@@ -79,8 +140,9 @@ Don't start several cloud commands in parallel while a sign-in is pending.
 - Treat aliases or accounts that merely look like production (`prd`, `live`)
   the same way, even if they are not marked.
 - Don't change cloudhop itself (`cloudhop add`, `rm`, `mv`, `region`, `prod`,
-  `team import`, `agent`, `login` for another source) unless the user asked
-  for it. Never unmark a production alias to get around a confirmation.
+  `team import`, `agent`, `login` for another source) or write a
+  `.cloudhoprc` unless the user asked for it. Never unmark a production
+  alias to get around a confirmation.
 
 ## 5. When something goes wrong
 
