@@ -104,6 +104,7 @@ export function createApi(app: CloudhopApp, assistants?: AssistantsInstaller) {
             kindLabel:
               provider.sourceKinds.find((k) => k.kind === source.kind)?.label ?? source.kind,
             settings: source.settings,
+            local: app.isLocal(source),
             session: await provider.sessionState(source),
           };
         }),
@@ -127,7 +128,7 @@ export function createApi(app: CloudhopApp, assistants?: AssistantsInstaller) {
           })),
         })),
         sources,
-        aliases: aliases.map(({ alias, target, region }) => ({
+        aliases: aliases.map(({ alias, source, target, region }) => ({
           name: alias.name,
           source: alias.source,
           target: alias.target,
@@ -136,6 +137,7 @@ export function createApi(app: CloudhopApp, assistants?: AssistantsInstaller) {
           region,
           prod: alias.prod === true,
           default: alias.default === true,
+          local: app.isLocal(source),
         })),
       };
     },
@@ -212,7 +214,7 @@ export function createApi(app: CloudhopApp, assistants?: AssistantsInstaller) {
     'POST /api/sources/:id/login': async ([id]) => reportView(await app.login(id as string)),
 
     'POST /api/sources/:id/sync': async ([id]) => {
-      await app.ensureSession(id as string);
+      if (!app.isLocal(await findSource(id as string))) await app.ensureSession(id as string);
       return reportView(await app.syncSource(id as string));
     },
 
@@ -220,7 +222,7 @@ export function createApi(app: CloudhopApp, assistants?: AssistantsInstaller) {
       await findSource(id as string);
       let targets = await app.listTargets(id as string);
       if (targets.length === 0) {
-        await app.ensureSession(id as string);
+        if (!app.isLocal(await findSource(id as string))) await app.ensureSession(id as string);
         targets = (await app.syncSource(id as string)).targets;
       }
       return { targets: targets.map(targetView) };

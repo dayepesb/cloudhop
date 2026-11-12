@@ -52,6 +52,9 @@ Runs any command with the alias' temporary credentials in its environment
 | `cloudhop add` | Add an SSO portal or personal account, sign in and create aliases. |
 | `cloudhop add aws sso --start-url <url> [--region <r>] [--name <id>]` | Same, without questions. |
 | `cloudhop add aws console-login [--region <r>] [--name <id>]` | Add a personal account without questions. |
+| `cloudhop add aws aws-emulator [--port 9297] [--region <r>] [--name <id>] [--alias <a>]` | Add AWS Emulator on this machine, with an alias. See [Use a local emulator](/cloudhop/guides/local-emulators/). |
+| `cloudhop add aws localstack [--endpoint http://localhost:4566] [--region <r>] [--name <id>] [--alias <a>]` | Add LocalStack or another emulator, with an alias. |
+| `cloudhop credentials <alias>` | The keys of an emulator alias, as JSON for `credential_process`. The AWS CLI runs it; you don't need to. |
 | `cloudhop ui [--port <n>] [--no-open]` | The same, from a [local web page](/cloudhop/guides/web-ui/). |
 
 ## Aliases

@@ -57,8 +57,10 @@ const SESSION_LABEL: Record<SessionState, string> = {
   valid: paint('green', '● session valid'),
   refreshable: paint('yellow', '◐ renews automatically on next use'),
   expired: paint('red', '○ expired, opens the browser on next use'),
+  offline: paint('yellow', '○ emulator not running'),
   unknown: paint('dim', '· session managed by the cloud CLI'),
 };
+const RUNNING = paint('green', '● emulator running');
 
 /** Machine-readable output for scripts and AI assistants. Bump `version` on breaking changes. */
 const JSON_VERSION = 1;
@@ -118,7 +120,7 @@ export async function listCommand(
     console.log(
       `${bold(paint('sky', source.id))}  ${paint('dim', `${provider.displayName} · ${where}`)}`,
     );
-    console.log(`  ${SESSION_LABEL[state]}`);
+    console.log(`  ${state === 'valid' && app.isLocal(source) ? RUNNING : SESSION_LABEL[state]}`);
 
     const own = aliases.filter((a) => a.alias.source === source.id);
     if (own.length === 0) {
@@ -253,6 +255,7 @@ const STATE_SHORT: Record<SessionState, string> = {
   valid: paint('green', '● session valid'),
   refreshable: paint('yellow', '◐ session expired, renewable'),
   expired: paint('red', '○ session expired'),
+  offline: paint('yellow', '○ emulator not running'),
   unknown: paint('dim', '· session'),
 };
 
@@ -260,6 +263,7 @@ const NEXT_TEXT: Record<SessionNext, string> = {
   ready: 'ready to run',
   'silent-renewal': 'the next command renews the session silently',
   'browser-sign-in': 'the next command opens the browser to sign in',
+  'start-emulator': 'start the emulator first',
   unknown: 'the cloud CLI manages this session',
 };
 

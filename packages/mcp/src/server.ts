@@ -11,7 +11,8 @@ export const MCP_INSTRUCTIONS = `cloudhop gives each cloud account + role + regi
 Before the first cloud operation in a conversation: call list_aliases, show the user the aliases (name, account/role, region) and ask which one to use. Never guess the alias. If list_aliases has folder.aliases (the project's .cloudhoprc), inUse or an alias with default: true, offer that alias first, but still ask.
 Use run_cloud_cli for cloud CLI commands, never --profile. Read-only commands may run once the alias is chosen; before anything that creates, changes or deletes resources, show the alias, account, region and exact command, and wait for the user's explicit OK. Aliases with prod: true are production: run_cloud_cli refuses changes there until the user approves and you pass confirm_production: true.
 To show the user something in the web console, call open_console (it opens their browser, already signed in).
-If a tool returns LOGIN_REQUIRED or alias_status says browser-sign-in: tell the user their browser will open, then call login (it waits up to 5 minutes for them to approve). Never print or ask for credentials.`;
+If a tool returns LOGIN_REQUIRED or alias_status says browser-sign-in: tell the user their browser will open, then call login (it waits up to 5 minutes for them to approve). Never print or ask for credentials.
+Aliases with local: true point to an emulator on the user's machine (AWS Emulator, LocalStack), never to the cloud: account 000000000000, no web console, never production. If a tool returns EMULATOR_NOT_RUNNING or alias_status says start-emulator, tell the user to start their emulator (the hint says how); don't call login.`;
 
 /** Protocol revisions this server speaks; it only uses fields common to all of them. */
 const SUPPORTED_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];

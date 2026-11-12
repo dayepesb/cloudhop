@@ -74,6 +74,7 @@ Without it, `cloudhop use` opens a new shell, and everything below still works.
 | Give any tool temporary credentials | `cloudhop exec acme-prod -- terraform plan` |
 | See your portals and aliases | `cloudhop ls` |
 | Add another portal or personal account | `cloudhop add` |
+| Give AWS Emulator or LocalStack an alias | `cloudhop add aws aws-emulator --name local` |
 | Create more aliases from a portal | `cloudhop alias acme` |
 | Change an alias' region | `cloudhop region acme-prod us-east-2` |
 | Remove an alias or a portal | `cloudhop rm acme-dev` |
@@ -143,6 +144,7 @@ English and [Spanish](https://dayepesb.github.io/cloudhop/es/):
 [getting started](https://dayepesb.github.io/cloudhop/getting-started/),
 [company SSO portals](https://dayepesb.github.io/cloudhop/guides/aws-sso/),
 [personal accounts](https://dayepesb.github.io/cloudhop/guides/personal-accounts/),
+[local emulators](https://dayepesb.github.io/cloudhop/guides/local-emulators/),
 [other tools](https://dayepesb.github.io/cloudhop/guides/other-tools/) and
 [troubleshooting](https://dayepesb.github.io/cloudhop/reference/troubleshooting/).
 

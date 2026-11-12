@@ -41,6 +41,21 @@ páginas de AWS.
 - Entrar a una carpeta nunca abre tu navegador: lo hace el primer comando que
   necesite una sesión.
 
+## Emuladores locales
+
+- Un alias de emulador apunta a tu máquina; un endpoint en `amazonaws.com`
+  se rechaza, así que no puede mandar peticiones a AWS.
+- Las llaves de AWS Emulator cambian en cada arranque. Se leen cuando el AWS
+  CLI las pide (`credential_process`) y cloudhop nunca las guarda. Las
+  llaves `test`/`test` de LocalStack son de mentira.
+- Cambiar a un emulador borra las llaves de AWS que hayan quedado en la
+  terminal, y `cloudhop exec` desactiva la búsqueda de credenciales de una
+  máquina en la nube.
+- TLS sigue activo: cloudhop confía solo en el archivo de certificado de
+  AWS Emulator, nada más.
+- Un alias de emulador no se puede marcar como producción y no tiene
+  consola web.
+
 ## La interfaz web local
 
 `cloudhop ui` expone las mismas acciones que el CLI, así que está restringida

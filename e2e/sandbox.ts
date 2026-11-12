@@ -72,8 +72,12 @@ export async function sandbox(options: { seed?: boolean } = {}) {
     );
   }
 
+  // The terminal running the tests may use an alias itself (cloudhop use, a default): drop that.
+  const inherited = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !name.startsWith('CLOUDHOP_')),
+  );
   const env = (extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv => ({
-    ...process.env,
+    ...inherited,
     CLOUDHOP_HOME: home,
     CLOUDHOP_AWS_DIR: aws,
     NO_COLOR: '1',

@@ -42,6 +42,13 @@ path; these are commands for **them** to run in their own terminal:
 4. **One-offs**: `hop <alias> <aws args>` runs one command in another
    account without switching; `cloudhop each` runs it in many;
    `cloudhop console <alias> [service]` opens the web console signed in.
+5. **Local emulators**: `cloudhop add` → "AWS Emulator (local)" or
+   "LocalStack or another local emulator" (or
+   `cloudhop add aws aws-emulator --name local`) gives the emulator an
+   alias. Then `cloudhop use local` + plain `aws`, `hop local ...`, a
+   `.cloudhoprc` with `aws: local` for tests, or
+   `cloudhop exec local -- npm test`. It never reaches AWS. The user starts
+   the emulator themselves; cloudhop says so when it isn't running.
 
 Why `cloudhop shell` is needed: a program can't change the environment of
 the terminal that started it, only the shell can.
@@ -85,6 +92,15 @@ Before the first cloud operation in a conversation:
 3. Use that alias for the rest of the conversation. Ask again if the user
    moves to another environment, account or task.
 
+**Local emulators.** An alias with `local: true` (in `cloudhop ls --json`,
+`list_aliases` or `status`) points to AWS Emulator or LocalStack on the
+user's machine: account `000000000000`, never the cloud. Use it like any
+alias (`hop local s3 ls`). It has no web console and is never production,
+so changes there don't need the production confirmation, but still say
+what you will create or delete. Never run a command meant for the
+emulator with a cloud alias, or the other way round: if the user said
+"local" or "the emulator", the alias must have `local: true`.
+
 ## 2. Check the session before running anything
 
 Run `cloudhop status <alias> --json` (or the `alias_status` tool) and read
@@ -95,6 +111,7 @@ Run `cloudhop status <alias> --json` (or the `alias_status` tool) and read
 | `ready`           | Session valid                                | Go ahead                                                                                                                                          |
 | `silent-renewal`  | Expired but renewable without the user       | Go ahead; cloudhop renews it                                                                                                                      |
 | `browser-sign-in` | The user must sign in                        | Tell the user their browser will open and they need to approve, then run `cloudhop login <source>` (or the `login` tool) and wait up to 5 minutes |
+| `start-emulator`  | A local emulator that isn't running          | Tell the user to start it (the error's hint says how); never call `login` for it                                                                  |
 | `unknown`         | Managed by the cloud CLI (personal accounts) | Go ahead; if it fails, run `cloudhop login <source>`                                                                                              |
 
 Don't start several cloud commands in parallel while a sign-in is pending.
@@ -163,5 +180,7 @@ Don't start several cloud commands in parallel while a sign-in is pending.
 | `Alias "x" not found`                               | Run `cloudhop ls` and ask the user again                                       |
 | AWS CLI missing or too old                          | Suggest `cloudhop doctor`; don't install anything without asking               |
 | `AccessDenied`                                      | The role lacks permission: tell the user; don't try other aliases on your own  |
+| `EMULATOR_NOT_RUNNING`                              | Same as `start-emulator` above                                                 |
+| `NotImplemented` (HTTP 501) on a `local` alias      | The emulator doesn't cover that operation yet: tell the user, it isn't a cloudhop problem |
 
 More: https://dayepesb.github.io/cloudhop/guides/hop-like-aws/

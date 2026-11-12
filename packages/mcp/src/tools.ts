@@ -59,7 +59,7 @@ export function createTools(app: CloudhopApp, context?: () => Promise<object>): 
       name: 'list_aliases',
       title: 'List cloudhop aliases',
       description:
-        'Lists every cloudhop source (SSO portal or personal account) with its session state, and every alias: name, account/role label, region and whether a sign-in is needed. Also hints: `folder` (the aliases this project pins in its .cloudhoprc, and whether the user trusted it) and `inUse` (aliases the user switched their terminal to); `default: true` marks the alias new terminals of the user start with. Call this first, then ask the user which alias to work with, offering the hinted one first. Never contains secrets.',
+        'Lists every cloudhop source (SSO portal, personal account or local emulator) with its session state, and every alias: name, account/role label, region and whether a sign-in is needed. Also hints: `folder` (the aliases this project pins in its .cloudhoprc, and whether the user trusted it) and `inUse` (aliases the user switched their terminal to); `local: true` marks an alias of an emulator on this machine; `default: true` marks the alias new terminals of the user start with. Call this first, then ask the user which alias to work with, offering the hinted one first. Never contains secrets.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, openWorldHint: false },
       run: async () => ({ ...(await app.overview()), ...(await context?.()) }),
@@ -68,7 +68,7 @@ export function createTools(app: CloudhopApp, context?: () => Promise<object>): 
       name: 'alias_status',
       title: 'Check an alias',
       description:
-        'Shows which account, role and region an alias points to and whether it can run now. `next` is "ready", "silent-renewal" (runs without asking), "browser-sign-in" (call login first, or ask the user to run `cloudhop login <source>`) or "unknown".',
+        'Shows which account, role and region an alias points to and whether it can run now. `next` is "ready", "silent-renewal" (runs without asking), "browser-sign-in" (call login first, or ask the user to run `cloudhop login <source>`), "start-emulator" (a local emulator that is not running: ask the user to start it) or "unknown".',
       inputSchema: {
         type: 'object',
         properties: aliasInput,

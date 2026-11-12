@@ -54,6 +54,9 @@ comando. Consulta
 | `cloudhop add` | Agrega un portal SSO o una cuenta personal, inicia sesión y crea alias. |
 | `cloudhop add aws sso --start-url <url> [--region <r>] [--name <id>]` | Lo mismo, sin preguntas. |
 | `cloudhop add aws console-login [--region <r>] [--name <id>]` | Agrega una cuenta personal sin preguntas. |
+| `cloudhop add aws aws-emulator [--port 9297] [--region <r>] [--name <id>] [--alias <a>]` | Agrega AWS Emulator en esta máquina, con un alias. Consulta [Usa un emulador local](/cloudhop/es/guides/local-emulators/). |
+| `cloudhop add aws localstack [--endpoint http://localhost:4566] [--region <r>] [--name <id>] [--alias <a>]` | Agrega LocalStack u otro emulador, con un alias. |
+| `cloudhop credentials <alias>` | Las llaves de un alias de emulador, en JSON para `credential_process`. Lo ejecuta el AWS CLI; tú no lo necesitas. |
 | `cloudhop ui [--port <n>] [--no-open]` | Lo mismo, desde una [página web local](/cloudhop/es/guides/web-ui/). |
 
 ## Alias

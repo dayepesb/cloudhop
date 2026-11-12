@@ -15,7 +15,18 @@ export interface SourceKind {
   hint?: string;
   /** How to ask for the source's short name, e.g. "Name for this organization". */
   nameLabel?: string;
+  /**
+   * An emulator on this machine (LocalStack, AWS Emulator): nothing to sign
+   * in to, never production, no web console.
+   */
+  local?: boolean;
   fields: SourceField[];
+}
+
+/** Keys a local emulator accepts. Fake ones, or vended by the emulator for this run. */
+export interface LocalCredentials {
+  accessKeyId: string;
+  secretAccessKey: string;
 }
 
 /** What a provider may ask of the outside world while logging in. */
@@ -76,4 +87,8 @@ export interface CloudProvider {
   consoleUrl?(alias: ResolvedAlias, service?: string): Promise<ConsoleSignIn>;
   /** True when CLI output means the session expired and logging in again should fix it. */
   isSessionError(output: string): boolean;
+  /** For local sources: how to start the emulator, shown when it isn't running. */
+  offlineHint?(source: Source): string;
+  /** For local sources: the keys to sign with, read fresh on every call (`credential_process`). */
+  localCredentials?(alias: ResolvedAlias): Promise<LocalCredentials>;
 }

@@ -5,6 +5,7 @@ const SESSION_TEXT = {
   valid: 'Session valid',
   refreshable: 'Renews on next use',
   expired: 'Expired: sign in on next use',
+  offline: 'Emulator not running',
   unknown: 'Managed by the cloud CLI',
 };
 
@@ -390,7 +391,10 @@ function openSourceChooser() {
 // ---------- Sources page ----------
 
 function sourcesPage() {
-  const head = pageHead('Sources', 'The SSO portals and personal accounts you sign in to.');
+  const head = pageHead(
+    'Sources',
+    'The SSO portals and personal accounts you sign in to, and your local emulators.',
+  );
   if (state.sources.length === 0) return [head, firstSourceHero()];
   return [head, ...state.sources.map(sourceCard)];
 }
@@ -758,52 +762,64 @@ function renderChooseClouds() {
 
 function sourceCard(source) {
   const aliases = state.aliases.filter((a) => a.source === source.id);
-  const where = source.settings.startUrl ?? source.kindLabel;
+  const where =
+    source.settings.startUrl ??
+    source.settings.endpoint ??
+    (source.settings.port ? `https://127.0.0.1:${source.settings.port}` : source.kindLabel);
+  const sessionText =
+    source.local && source.session === 'valid'
+      ? 'Emulator running'
+      : (SESSION_TEXT[source.session] ?? source.session);
   const head = h(
     'div',
     { class: 'card-head' },
     h('h2', {}, source.id),
-    h('span', { class: `badge ${source.session}` }, SESSION_TEXT[source.session] ?? source.session),
+    h('span', { class: `badge ${source.session}` }, sessionText),
     h('span', { class: 'meta' }, `${source.providerName} · ${where}`),
     h('div', { class: 'spacer' }),
     h(
       'div',
       { class: 'actions' },
       h('button', { onclick: () => openAliasPicker(source) }, '+ Aliases'),
-      h(
-        'button',
-        {
-          title: 'Sign in again and refresh its accounts',
-          onclick: (e) =>
-            busy(e.currentTarget, async () => {
-              toast('Opening the browser to sign in…');
-              const report = await api(
-                'POST',
-                `/api/sources/${encodeURIComponent(source.id)}/login`,
-              ).catch(fail);
-              if (report)
-                toast(`${source.id}: signed in, ${report.targets.length} account/role(s).`);
-              await refresh();
-            }),
-        },
-        'Sign in',
-      ),
-      h(
-        'button',
-        {
-          title: 'Refresh the accounts and roles you have access to',
-          onclick: (e) =>
-            busy(e.currentTarget, async () => {
-              const report = await api(
-                'POST',
-                `/api/sources/${encodeURIComponent(source.id)}/sync`,
-              ).catch(fail);
-              if (report) toast(syncMessage(source.id, report));
-              await refresh();
-            }),
-        },
-        'Sync',
-      ),
+      // An emulator has nothing to sign in to or refresh.
+      source.local
+        ? null
+        : h(
+            'button',
+            {
+              title: 'Sign in again and refresh its accounts',
+              onclick: (e) =>
+                busy(e.currentTarget, async () => {
+                  toast('Opening the browser to sign in…');
+                  const report = await api(
+                    'POST',
+                    `/api/sources/${encodeURIComponent(source.id)}/login`,
+                  ).catch(fail);
+                  if (report)
+                    toast(`${source.id}: signed in, ${report.targets.length} account/role(s).`);
+                  await refresh();
+                }),
+            },
+            'Sign in',
+          ),
+      source.local
+        ? null
+        : h(
+            'button',
+            {
+              title: 'Refresh the accounts and roles you have access to',
+              onclick: (e) =>
+                busy(e.currentTarget, async () => {
+                  const report = await api(
+                    'POST',
+                    `/api/sources/${encodeURIComponent(source.id)}/sync`,
+                  ).catch(fail);
+                  if (report) toast(syncMessage(source.id, report));
+                  await refresh();
+                }),
+            },
+            'Sync',
+          ),
       h(
         'button',
         {
@@ -907,8 +923,10 @@ function aliasRow(alias) {
     h(
       'button',
       {
-        title: `Open the AWS console as ${alias.name}, already signed in`,
-        disabled: alias.missing,
+        title: alias.local
+          ? 'A local emulator has no web console'
+          : `Open the AWS console as ${alias.name}, already signed in`,
+        disabled: alias.missing || alias.local,
         onclick: (e) =>
           busy(e.currentTarget, async () => {
             const result = await api(
@@ -931,10 +949,16 @@ function aliasRow(alias) {
     ),
     h(
       'label',
-      { class: 'prod-toggle', title: 'Production: hop and AI assistants ask before any change' },
+      {
+        class: 'prod-toggle',
+        title: alias.local
+          ? 'A local emulator never reaches the cloud: nothing to protect'
+          : 'Production: hop and AI assistants ask before any change',
+      },
       h('input', {
         type: 'checkbox',
         checked: alias.prod,
+        disabled: alias.local,
         'aria-label': `${alias.name} is production`,
         onchange: (e) =>
           patch(
@@ -1002,6 +1026,9 @@ function aliasRow(alias) {
       { class: 'alias', title: `hop ${alias.name} <command>` },
       alias.name,
       alias.prod ? h('span', { class: 'prod-tag' }, 'PROD') : null,
+      alias.local
+        ? h('span', { class: 'default-tag', title: 'Runs against a local emulator' }, 'LOCAL')
+        : null,
       alias.default
         ? h(
             'span',

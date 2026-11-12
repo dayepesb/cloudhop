@@ -14,7 +14,13 @@ export interface IniSection {
 export function renderBlock(sections: readonly IniSection[]): string {
   const body = sections
     .map((s) =>
-      [`[${s.header}]`, ...Object.entries(s.values).map(([k, v]) => `${k} = ${v}`)].join('\n'),
+      [
+        `[${s.header}]`,
+        ...Object.entries(s.values).map(
+          // A value that starts on a new line is a nested section, like `s3 =` + `  addressing_style = path`.
+          ([k, v]) => `${k} =${v.startsWith('\n') ? '' : ' '}${v}`,
+        ),
+      ].join('\n'),
     )
     .join('\n\n');
   return `${BLOCK_START}\n${body}${body ? '\n' : ''}${BLOCK_END}\n`;

@@ -62,6 +62,9 @@ Setup
   cloudhop add                   Add an SSO portal or a personal account
   cloudhop add aws sso --start-url <url> [--region <r>] [--name <id>]
   cloudhop add aws console-login [--region <r>] [--name <id>]
+  cloudhop add aws aws-emulator [--port 9297] [--region <r>] [--name <id>]
+  cloudhop add aws localstack [--endpoint http://localhost:4566] [--region <r>] [--name <id>]
+                                 A local emulator: an alias like any other, never reaching AWS
   cloudhop team export [--out <file>] | team import <file|https URL>
                                  Share portals and aliases with your team (no secrets)
   cloudhop alias [source]        Create more aliases from a source
@@ -155,6 +158,20 @@ async function main(argv: string[]): Promise<number> {
   // What the shell integration evals (on `cd` too): fast, and nothing else on stdout.
   if (command === 'use' && local.some((a) => a === '--emit' || a.startsWith('--emit='))) {
     return useCommand(app, createTrustedFolders(), local);
+  }
+
+  // The `credential_process` of emulator profiles: the AWS CLI and SDKs read JSON from stdout.
+  if (command === 'credentials') {
+    const name = local[0];
+    if (!name) throw new CloudhopError('INVALID_NAME', 'Usage: cloudhop credentials <alias>');
+    const keys = await app.localCredentials(name);
+    const json = {
+      Version: 1,
+      AccessKeyId: keys.accessKeyId,
+      SecretAccessKey: keys.secretAccessKey,
+    };
+    process.stdout.write(`${JSON.stringify(json)}\n`);
+    return 0;
   }
 
   if (command === 'mcp') {

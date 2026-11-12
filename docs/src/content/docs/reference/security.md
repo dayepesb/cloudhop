@@ -37,6 +37,19 @@ PKCE and a browser redirect to `127.0.0.1`, or a device code with
 - Entering a folder never opens your browser: the first command that needs a
   session does.
 
+## Local emulators
+
+- An emulator alias points to your machine; an endpoint on `amazonaws.com`
+  is refused, so it can't send requests to AWS.
+- AWS Emulator's keys change on every start. They are read when the AWS CLI
+  asks (`credential_process`) and never stored by cloudhop. LocalStack's
+  `test`/`test` keys are fake.
+- Switching to an emulator clears AWS keys left in the terminal, and
+  `cloudhop exec` turns off the fallback to a cloud machine's credentials.
+- TLS stays on: cloudhop trusts AWS Emulator's own certificate file,
+  nothing else.
+- An emulator alias can't be marked production and has no web console.
+
 ## The local web UI
 
 `cloudhop ui` exposes the same actions as the CLI, so it is locked to the

@@ -4,6 +4,7 @@ import {
   type CloudProvider,
   type ConsoleSignIn,
   type EnvMode,
+  type LocalCredentials,
   type LoginInteraction,
   type ProcessEnv,
   type ProcessRunner,
@@ -15,6 +16,21 @@ import {
 } from '@cloudhop/core';
 import { type IniSection, writeManagedBlock } from './aws-config';
 import { consoleDestination, federatedConsoleUrl, portalShortcutUrl } from './console';
+import {
+  AWS_EMULATOR_KIND,
+  DEFAULT_EMULATOR_PORT,
+  DEFAULT_LOCALSTACK_ENDPOINT,
+  emulatorCredentials,
+  emulatorDir,
+  emulatorEndpoint,
+  isListening,
+  LOCAL_KINDS,
+  LOCALSTACK_KIND,
+  localTarget,
+  offlineHint,
+  validateEndpoint,
+  validatePort,
+} from './emulator';
 import type { Fetch } from './http';
 import { PortalClient } from './sso/portal';
 import { refreshSsoToken, ssoLogin } from './sso/sso-login';
@@ -27,6 +43,8 @@ export interface AwsProviderOptions {
   fetchFn?: Fetch;
   /** Use the device code flow instead of the local browser redirect. */
   preferDeviceCode?: () => boolean;
+  /** Whether a local emulator is up; a TCP connect by default. */
+  probe?: (host: string, port: number) => Promise<boolean>;
 }
 
 /** Partition prefix, a compass direction, a number: us-east-1, ap-southeast-2, us-gov-west-1. */
@@ -142,21 +160,54 @@ export class AwsProvider implements CloudProvider {
         },
       ],
     },
+    {
+      kind: AWS_EMULATOR_KIND,
+      label: 'AWS Emulator (local)',
+      hint: 'AWS service APIs on this machine. No AWS account involved.',
+      nameLabel: 'Short name for this emulator',
+      local: true,
+      fields: [
+        { key: 'port', label: 'Port', defaultValue: DEFAULT_EMULATOR_PORT, validate: validatePort },
+        { key: 'region', label: 'Region', defaultValue: 'us-east-1', validate: validateRegion },
+      ],
+    },
+    {
+      kind: LOCALSTACK_KIND,
+      label: 'LocalStack or another local emulator',
+      hint: 'Any emulator with an AWS endpoint, signed with test/test.',
+      nameLabel: 'Short name for this emulator',
+      local: true,
+      fields: [
+        {
+          key: 'endpoint',
+          label: 'Endpoint',
+          defaultValue: DEFAULT_LOCALSTACK_ENDPOINT,
+          validate: validateEndpoint,
+        },
+        { key: 'region', label: 'Region', defaultValue: 'us-east-1', validate: validateRegion },
+      ],
+    },
   ];
 
   private readonly fetchFn: Fetch;
+  private readonly probe: (host: string, port: number) => Promise<boolean>;
 
   constructor(private readonly options: AwsProviderOptions) {
     this.fetchFn = options.fetchFn ?? fetch;
+    this.probe = options.probe ?? ((host, port) => isListening(host, port));
   }
 
   async sessionState(source: Source): Promise<SessionState> {
     if (source.kind === CONSOLE_LOGIN_KIND) return 'unknown';
+    if (LOCAL_KINDS.includes(source.kind)) {
+      const { host, port } = emulatorEndpoint(source);
+      return (await this.probe(host, port)) ? 'valid' : 'offline';
+    }
     return tokenState(await readToken(this.options.awsDir, ssoSessionName(source.id)));
   }
 
   async refreshSession(source: Source): Promise<boolean> {
-    if (source.kind === CONSOLE_LOGIN_KIND) return false;
+    if (source.kind === CONSOLE_LOGIN_KIND || LOCAL_KINDS.includes(source.kind)) return false;
     const name = ssoSessionName(source.id);
     const token = await readToken(this.options.awsDir, name);
     const refreshed = token && (await refreshSsoToken(token, this.fetchFn));
@@ -166,6 +217,8 @@ export class AwsProvider implements CloudProvider {
   }
 
   async login(source: Source, interaction: LoginInteraction): Promise<void> {
+    // An emulator has nothing to sign in to; whether it runs is checked before each command.
+    if (LOCAL_KINDS.includes(source.kind)) return;
     if (source.kind === CONSOLE_LOGIN_KIND) {
       const args = ['login', '--profile', consoleProfileName(source.id)];
       if (source.settings.region) args.push('--region', source.settings.region);
@@ -186,6 +239,7 @@ export class AwsProvider implements CloudProvider {
 
   async discoverTargets(source: Source): Promise<Target[]> {
     if (source.kind === CONSOLE_LOGIN_KIND) return [CONSOLE_TARGET];
+    if (LOCAL_KINDS.includes(source.kind)) return [localTarget(source)];
     const portal = await this.portal(source);
     const accounts = await portal.listAccounts();
     const targets: Target[] = [];
@@ -220,6 +274,13 @@ export class AwsProvider implements CloudProvider {
       });
     }
     for (const { alias, source, target, region } of aliases) {
+      if (LOCAL_KINDS.includes(source.kind)) {
+        sections.push({
+          header: `profile ${alias.name}`,
+          values: this.localProfile(alias.name, source, region),
+        });
+        continue;
+      }
       if (source.kind !== SSO_KIND || !target) continue;
       sections.push({
         header: `profile ${alias.name}`,
@@ -249,6 +310,9 @@ export class AwsProvider implements CloudProvider {
         AWS_PROFILE: profile,
         ...regionEnv,
       };
+    }
+    if (LOCAL_KINDS.includes(resolved.source.kind)) {
+      return { AWS_PROFILE: undefined, ...(await this.localEnv(resolved)), ...regionEnv };
     }
     const credentials =
       resolved.source.kind === CONSOLE_LOGIN_KIND
@@ -282,6 +346,62 @@ export class AwsProvider implements CloudProvider {
 
   isSessionError(output: string): boolean {
     return SESSION_ERROR_PATTERNS.some((pattern) => pattern.test(output));
+  }
+
+  offlineHint(source: Source): string {
+    return offlineHint(source);
+  }
+
+  localCredentials(resolved: ResolvedAlias): Promise<LocalCredentials> {
+    return emulatorCredentials(this.options.awsDir, resolved.source);
+  }
+
+  /**
+   * The profile of an emulator alias: its endpoint, the certificate AWS
+   * Emulator writes on every start (same path, new content) and keys read
+   * fresh by `cloudhop credentials` on each call, since they change too.
+   */
+  private localProfile(
+    name: string,
+    source: Source,
+    region: string | undefined,
+  ): Record<string, string> {
+    const values: Record<string, string> = {
+      ...(region ? { region } : {}),
+      endpoint_url: emulatorEndpoint(source).url,
+    };
+    if (source.kind === AWS_EMULATOR_KIND) {
+      values.ca_bundle = join(emulatorDir(this.options.awsDir, source), 'ca.pem');
+      values.credential_process = `cloudhop credentials ${name}`;
+    } else {
+      // LocalStack's documented keys: fake, not secrets.
+      values.aws_access_key_id = 'test';
+      values.aws_secret_access_key = 'test';
+      // Bucket names in the path: `bucket.localhost` doesn't resolve everywhere.
+      values.s3 = '\n  addressing_style = path';
+    }
+    return values;
+  }
+
+  /** For `cloudhop exec`: tools that read only variables, not profiles. */
+  private async localEnv(resolved: ResolvedAlias): Promise<ProcessEnv> {
+    const { source } = resolved;
+    const keys = await emulatorCredentials(this.options.awsDir, source);
+    const env: ProcessEnv = {
+      AWS_ACCESS_KEY_ID: keys.accessKeyId,
+      AWS_SECRET_ACCESS_KEY: keys.secretAccessKey,
+      AWS_SESSION_TOKEN: undefined,
+      AWS_ENDPOINT_URL: emulatorEndpoint(source).url,
+      // Never fall back to the credentials of a machine in the cloud.
+      AWS_EC2_METADATA_DISABLED: 'true',
+    };
+    if (source.kind === AWS_EMULATOR_KIND) {
+      const ca = join(emulatorDir(this.options.awsDir, source), 'ca.pem');
+      env.AWS_CA_BUNDLE = ca;
+      // Node.js SDKs don't read ca_bundle. Adds trust in this certificate only; one already set wins.
+      if (!process.env.NODE_EXTRA_CA_CERTS) env.NODE_EXTRA_CA_CERTS = ca;
+    }
+    return env;
   }
 
   private async roleCredentials(resolved: ResolvedAlias): Promise<ProcessEnv> {

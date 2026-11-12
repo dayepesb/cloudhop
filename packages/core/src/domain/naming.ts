@@ -4,6 +4,7 @@ import { CloudhopError } from './errors';
 export const RESERVED_NAMES = new Set([
   'add',
   'allow',
+  'credentials',
   'deny',
   'agent',
   'alias',

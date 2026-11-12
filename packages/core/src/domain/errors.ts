@@ -11,7 +11,9 @@ export type CloudhopErrorCode =
   | 'NOT_INTERACTIVE'
   | 'LOGIN_REQUIRED'
   | 'PROD_CONFIRMATION_REQUIRED'
-  | 'LOGIN_FAILED';
+  | 'LOGIN_FAILED'
+  | 'EMULATOR_NOT_RUNNING'
+  | 'NOT_SUPPORTED';
 
 /** An expected failure with a message meant for the user and an optional hint. */
 export class CloudhopError extends Error {

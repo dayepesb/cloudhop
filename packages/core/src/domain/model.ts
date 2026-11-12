@@ -37,7 +37,8 @@ export interface Config {
   aliases: Alias[];
 }
 
-export type SessionState = 'valid' | 'refreshable' | 'expired' | 'unknown';
+/** `offline`: a local emulator that isn't running (there is nothing to sign in to). */
+export type SessionState = 'valid' | 'refreshable' | 'expired' | 'offline' | 'unknown';
 
 export interface ResolvedAlias {
   alias: Alias;

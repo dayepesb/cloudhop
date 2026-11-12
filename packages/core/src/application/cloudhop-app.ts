@@ -27,6 +27,13 @@ import type {
   ToolInstaller,
 } from '../ports/system';
 
+const localNotProd = (name: string) =>
+  new CloudhopError(
+    'NOT_SUPPORTED',
+    `${name} is a local emulator: it can't be production.`,
+    'Production protection is for aliases that reach the cloud.',
+  );
+
 const loginRequired = (sourceId: string) =>
   new CloudhopError(
     'LOGIN_REQUIRED',
@@ -66,12 +73,18 @@ export interface DoctorEntry {
 }
 
 /** What the next command will need before it can run. */
-export type SessionNext = 'ready' | 'silent-renewal' | 'browser-sign-in' | 'unknown';
+export type SessionNext =
+  | 'ready'
+  | 'silent-renewal'
+  | 'browser-sign-in'
+  | 'start-emulator'
+  | 'unknown';
 
 const NEXT_BY_STATE: Record<SessionState, SessionNext> = {
   valid: 'ready',
   refreshable: 'silent-renewal',
   expired: 'browser-sign-in',
+  offline: 'start-emulator',
   unknown: 'unknown',
 };
 
@@ -97,6 +110,8 @@ export interface AliasStatus {
   attributes: Record<string, string>;
   /** Marked as production: protected against accidental changes. */
   prod: boolean;
+  /** Points to an emulator on this machine, not to the cloud. */
+  local: boolean;
   /** The alias new terminals of its cloud start with. */
   default: boolean;
   session: SessionState;
@@ -223,7 +238,9 @@ export class CloudhopApp {
     const config = await this.deps.config.load();
     const source = this.findSource(config, sourceId);
     const provider = this.provider(source.provider);
-    this.deps.notify(`Logging in to ${source.id} (${provider.displayName})…`);
+    if (!this.isLocal(source)) {
+      this.deps.notify(`Logging in to ${source.id} (${provider.displayName})…`);
+    }
     await provider.login(source, {
       openBrowser: (url) => this.deps.browser.open(url),
       notify: this.deps.notify,
@@ -246,6 +263,13 @@ export class CloudhopApp {
     const provider = this.provider(source.provider);
     const state = await provider.sessionState(source);
     if (state === 'valid' || state === 'unknown') return 'none';
+    if (state === 'offline') {
+      throw new CloudhopError(
+        'EMULATOR_NOT_RUNNING',
+        `The emulator of ${source.id} isn't running.`,
+        provider.offlineHint?.(source),
+      );
+    }
     if (state === 'refreshable' && (await provider.refreshSession(source))) return 'refreshed';
     if (!interactive) throw loginRequired(sourceId);
     await this.login(sourceId);
@@ -303,6 +327,7 @@ export class CloudhopApp {
       }
       names.add(alias.name);
       touchedProviders.add(source.provider);
+      if (alias.prod && this.isLocal(source)) throw localNotProd(alias.name);
       config.aliases.push(alias);
     }
 
@@ -356,6 +381,7 @@ export class CloudhopApp {
           region: resolved.region,
           attributes: resolved.target?.attributes ?? {},
           prod: alias.prod === true,
+          local: this.isLocal(resolved.source),
           default: alias.default === true,
           session: source.session,
           next: source.next,
@@ -399,6 +425,7 @@ export class CloudhopApp {
     const config = await this.deps.config.load();
     for (const name of names) {
       const alias = this.findAlias(config, name);
+      if (prod && this.isLocal(this.findSource(config, alias.source))) throw localNotProd(name);
       if (prod) alias.prod = true;
       else delete alias.prod;
     }
@@ -522,6 +549,13 @@ export class CloudhopApp {
   ): Promise<ConsoleSignIn> {
     const resolved = await this.usableAlias(name, region ? { region } : {});
     const provider = this.provider(resolved.source.provider);
+    if (this.isLocal(resolved.source)) {
+      throw new CloudhopError(
+        'NOT_SUPPORTED',
+        `${name} is a local emulator: it has no web console.`,
+        `Look at its resources with \`hop ${name} <command>\`.`,
+      );
+    }
     if (!provider.consoleUrl) {
       throw new CloudhopError(
         'PROVIDER_NOT_AVAILABLE',
@@ -550,6 +584,25 @@ export class CloudhopApp {
     const { url, via } = await this.consoleUrl(name, options);
     await this.deps.browser.open(url);
     return via;
+  }
+
+  /**
+   * The keys of a local emulator alias, for the `credential_process` of its
+   * profile. Never for cloud aliases: their credentials stay with the CLI.
+   */
+  async localCredentials(name: string) {
+    const resolved = await this.resolveAlias(name);
+    const provider = this.provider(resolved.source.provider);
+    if (!this.isLocal(resolved.source) || !provider.localCredentials) {
+      throw new CloudhopError('NOT_SUPPORTED', `${name} is not a local emulator alias.`);
+    }
+    return provider.localCredentials(resolved);
+  }
+
+  /** Whether a source is an emulator on this machine. */
+  isLocal(source: Source): boolean {
+    const provider = this.deps.providers.find((p) => p.id === source.provider);
+    return provider?.sourceKinds.find((k) => k.kind === source.kind)?.local === true;
   }
 
   /** The command that shows who an alias is, e.g. `aws sts get-caller-identity`. */

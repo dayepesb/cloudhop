@@ -32,7 +32,10 @@ class FakeProvider implements CloudProvider {
   readonly id = 'aws' as const;
   readonly displayName = 'AWS';
   readonly cli = { command: 'aws', displayName: 'AWS CLI', minVersion: '2.32.0' };
-  readonly sourceKinds = [{ kind: 'sso', label: 'SSO', fields: [] }];
+  readonly sourceKinds = [
+    { kind: 'sso', label: 'SSO', fields: [] },
+    { kind: 'emu', label: 'Emulator', local: true, fields: [] },
+  ];
   readonly identityArgs = ['sts', 'get-caller-identity'];
   readonly shellVars = ['FAKE_PROFILE'];
   isReadOnly(args: readonly string[]) {
@@ -70,6 +73,12 @@ class FakeProvider implements CloudProvider {
   }
   isSessionError(output: string) {
     return output.includes('ExpiredToken');
+  }
+  offlineHint() {
+    return 'Start the emulator.';
+  }
+  async localCredentials() {
+    return { accessKeyId: 'test', secretAccessKey: 'test' };
   }
 }
 
@@ -288,6 +297,35 @@ describe('CloudhopApp', () => {
     expect(await app.clearDefaultAlias('aws')).toEqual(['acme-dev']);
     expect(await app.defaultAliases()).toEqual({});
     expect(await app.clearDefaultAlias()).toEqual([]);
+  });
+
+  it('keeps local emulators out of production, the console and the browser', async () => {
+    await app.addSource({ id: 'local', provider: 'aws', kind: 'emu', settings: {} });
+    store.targets.set('local', [target('000000000000')]);
+    await app.addAliases([{ name: 'local', source: 'local', target: '000000000000' }]);
+    expect((await app.aliasStatus('local')).local).toBe(true);
+    expect((await app.aliasStatus('acme-prod')).local).toBe(false);
+    await expect(app.setProduction(['local'], true)).rejects.toMatchObject({
+      code: 'NOT_SUPPORTED',
+    });
+    await expect(
+      app.addAliases([{ name: 'local-2', source: 'local', target: '000000000000', prod: true }]),
+    ).rejects.toMatchObject({ code: 'NOT_SUPPORTED' });
+    await expect(app.consoleUrl('local')).rejects.toMatchObject({ code: 'NOT_SUPPORTED' });
+    expect(await app.localCredentials('local')).toEqual({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+    });
+    await expect(app.localCredentials('acme-prod')).rejects.toMatchObject({
+      code: 'NOT_SUPPORTED',
+    });
+
+    provider.state = 'offline';
+    await expect(app.ensureSession('local')).rejects.toMatchObject({
+      code: 'EMULATOR_NOT_RUNNING',
+      hint: 'Start the emulator.',
+    });
+    expect(provider.logins).toBe(0);
   });
 
   it('asks for confirmation only for changes on production aliases', async () => {

@@ -49,6 +49,7 @@ export default defineConfig({
           items: [
             { slug: 'guides/aws-sso' },
             { slug: 'guides/personal-accounts' },
+            { slug: 'guides/local-emulators' },
             { slug: 'guides/aliases-and-regions' },
             { slug: 'guides/team' },
             { slug: 'guides/web-ui' },

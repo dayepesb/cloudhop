@@ -17,7 +17,15 @@ import { answer, p, requireInteractive, validator } from '../ui';
 /** Suggests "acme" for https://acme.awsapps.com/start. */
 function suggestSourceId(settings: Record<string, string>, kind: string): string {
   const host = settings.startUrl?.match(/^https:\/\/([^./]+)\./)?.[1];
-  return suggestAliasName(host ?? (kind === 'console-login' ? 'personal' : 'main'));
+  const fallback =
+    kind === 'console-login'
+      ? 'personal'
+      : kind === 'aws-emulator'
+        ? 'local'
+        : kind === 'localstack'
+          ? 'localstack'
+          : 'main';
+  return suggestAliasName(host ?? fallback);
 }
 
 async function pickProvider(app: CloudhopApp): Promise<CloudProvider> {
@@ -119,11 +127,12 @@ export async function chooseAliases(
   let defaultRegion = source.settings.region ?? '';
   const suggestions = suggestAliases(targets, source.id, existing);
 
+  const local = app.isLocal(source);
   const aliases: Alias[] = [];
   for (const target of selected) {
     p.log.step(target.label);
     const suggestion = uniqueName(
-      targets.length === 1 && target.id === 'console'
+      targets.length === 1 && (target.id === 'console' || local)
         ? source.id
         : (suggestions.get(target.id) ?? suggestAliasName(target.label)),
       existing,
@@ -147,12 +156,15 @@ export async function chooseAliases(
           validate: (v) => (v?.trim() ? validateRegion?.(v.trim()) : undefined),
         }),
       ).trim() || defaultRegion;
-    const prod = answer(
-      await p.confirm({
-        message: `Is ${name} production? (cloudhop then asks before any change)`,
-        initialValue: looksLikeProduction(name, target.label),
-      }),
-    );
+    // An emulator never reaches the cloud: nothing to protect.
+    const prod =
+      !local &&
+      answer(
+        await p.confirm({
+          message: `Is ${name} production? (cloudhop then asks before any change)`,
+          initialValue: looksLikeProduction(name, target.label),
+        }),
+      );
     defaultRegion = region;
     existing.add(name);
     aliases.push({
@@ -214,6 +226,15 @@ export async function addCommand(app: CloudhopApp, args: ParsedArgs): Promise<vo
   if (args.positional.length > 0) {
     const source = sourceFromFlags(app, args);
     const report = await app.connectSource(source);
+    const target = report.targets[0];
+    if (app.isLocal(source) && target) {
+      // One emulator, one alias: named like the source unless that name is taken.
+      const taken = new Set((await app.config()).aliases.map((a) => a.name));
+      const name = uniqueName(args.flags.alias ?? source.id, taken);
+      await app.addAliases([{ name, source: source.id, target: target.id }]);
+      console.log(`Emulator "${source.id}" added as alias "${name}". Try:  hop ${name} s3 ls`);
+      return;
+    }
     console.log(`Source "${source.id}" added. ${report.targets.length} account/role(s) available:`);
     printTargets(source.id, report.targets);
     return;
@@ -224,7 +245,8 @@ export async function addCommand(app: CloudhopApp, args: ParsedArgs): Promise<vo
   const provider = await pickProvider(app);
   const source = await askSource(app, provider);
   const report = await app.connectSource(source);
-  p.log.success(`Logged in. Found ${report.targets.length} account/role combination(s).`);
+  if (app.isLocal(source)) p.log.success('Emulator added. Now give it an alias.');
+  else p.log.success(`Logged in. Found ${report.targets.length} account/role combination(s).`);
 
   const aliases = await chooseAliases(app, source, report.targets);
   await app.addAliases(aliases);
@@ -232,7 +254,9 @@ export async function addCommand(app: CloudhopApp, args: ParsedArgs): Promise<vo
   const first = aliases[0]?.name;
   p.outro(
     first
-      ? `Ready! Try:  hop ${first} sts get-caller-identity`
+      ? app.isLocal(source)
+        ? `Ready! Try:  hop ${first} s3 ls   (or \`cloudhop use ${first}\`, then plain aws)`
+        : `Ready! Try:  hop ${first} sts get-caller-identity`
       : `Source "${source.id}" saved. Create aliases later with \`cloudhop alias ${source.id}\`.`,
   );
 }
@@ -262,7 +286,8 @@ export async function aliasCommand(
   const source = sources.find((s) => s.id === id);
   if (!source) throw new CloudhopError('SOURCE_NOT_FOUND', `Source "${id}" not found.`);
 
-  await app.ensureSession(id);
+  // An emulator doesn't have to be running to get another alias.
+  if (!app.isLocal(source)) await app.ensureSession(id);
   let targets = await app.listTargets(id);
   if (targets.length === 0) targets = (await app.syncSource(id)).targets;
 

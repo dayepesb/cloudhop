@@ -30,6 +30,7 @@ function stubApp() {
       { alias: { name: 'dev', source: 'acme', target: '1/Dev' }, source, region: 'us-east-1' },
     ],
     availableProviders: () => [provider],
+    isLocal: () => false,
     provider: () => provider,
     resolveAlias: async () => ({
       alias: { name: 'dev', source: 'acme', target: '1/Dev', default: true },
