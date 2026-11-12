@@ -68,14 +68,14 @@ describe('a local emulator', () => {
     expect(cloud.code).not.toBe(0);
     expect(cloud.stdout).toBe('');
 
-    const exec = await run([
-      'exec',
-      'local',
-      '--',
-      process.execPath,
-      '-e',
-      'console.log(process.env.AWS_ENDPOINT_URL, process.env.AWS_ACCESS_KEY_ID, process.env.AWS_PROFILE ?? "-")',
-    ]);
+    // A script file, not `node -e '…'`: on Windows the command goes through cmd.exe,
+    // which would split an inline script at its spaces.
+    const printEnv = join(box.root, 'print-env.cjs');
+    await writeFile(
+      printEnv,
+      'console.log(process.env.AWS_ENDPOINT_URL, process.env.AWS_ACCESS_KEY_ID, process.env.AWS_PROFILE ?? "-")\n',
+    );
+    const exec = await run(['exec', 'local', '--', 'node', printEnv]);
     expect(exec.stdout.trim()).toBe(`https://127.0.0.1:${port} EMULATORKEY -`);
 
     expect((await run(['prod', 'local'])).stderr).toContain("can't be production");
