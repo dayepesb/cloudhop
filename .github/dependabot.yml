@@ -8,6 +8,10 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+    ignore:
+      # Types match the oldest Node cloudhop supports (engines), not the newest.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directories: [/, /.github/actions/*]
     schedule:
