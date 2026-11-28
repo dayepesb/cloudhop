@@ -46,7 +46,7 @@
     "prepack": "cp ../../README.md ../../LICENSE ../../NOTICE . && tsup"
   },
   "devDependencies": {
-    "@clack/prompts": "^1.8.1",
+    "@clack/prompts": "^1.9.0",
     "@cloudhop/adapters-node": "workspace:*",
     "@cloudhop/assistants": "workspace:*",
     "@cloudhop/core": "workspace:*",
